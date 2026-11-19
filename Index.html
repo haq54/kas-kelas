@@ -41,7 +41,11 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{padding:6px 4px
 .pv{font-size:.85rem;border-top:1px solid var(--line);padding:4px 0;display:flex;gap:8px}.pv span:last-child{margin-left:auto}
 .err{color:var(--out);font-size:.88rem;margin:0}.ok{color:var(--in);font-size:.88rem;margin:0}
 .in{color:var(--in)}.out{color:var(--out)}
-</style></head><body><div class="wrap">
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+</head><body><div class="wrap">
 <header><h1>Kas Kelas</h1><span class="badge" id="role">Memuat…</span></header>
 <nav id="nav"></nav><div id="note"></div><div id="view"></div></div>
 <script>
@@ -191,15 +195,27 @@ var seen={};
 function sub(col,set,q2){var first=true;(q2||db.collection(col)).onSnapshot(function(s){set(s.docs.map(function(d){return Object.assign({id:d.id},d.data())}));if(first){first=false;loaded++;if(loaded>=5){clearTimeout(tmo);$('#note').innerHTML=''}}if(loaded>=5)fill()},function(){$('#note').innerHTML='<div class="alert red">Data belum bisa dimuat.</div>'})}
 async function init(){
  nav();$('#view').innerHTML='<p class="sm">Memuat…</p>';
- try{var u=await claude.use('user');canEdit=u?await u.canEdit():false;db=await claude.use('db')}catch(e){db=null}
+  try{
+  firebase.initializeApp({apiKey:"ISI",authDomain:"ISI",projectId:"ISI"}); // salin dari Firebase Console
+  db=firebase.firestore();
+  firebase.auth().onAuthStateChanged(function(u){
+   canEdit=!!u;
+   $('#role').textContent=canEdit?'Bendahara (ketuk untuk keluar)':'Hanya lihat (ketuk untuk masuk)';
+   fill()});
+ }catch(e){db=null}
  $('#role').textContent=canEdit?'Bendahara (bisa edit)':'Hanya lihat';
- if(!db){$('#view').innerHTML='<div class="alert red">Penyimpanan bersama tidak tersedia. Buka lewat tautan artifact dan masuk ke akun.</div>';return}
+ if(!db){$('#view').innerHTML='<div class="alert red">Koneksi ke server gagal. Cek internet lalu muat ulang.</div>';return}
  tmo=setTimeout(function(){$('#note').innerHTML='<div class="alert">Data belum terjangkau, mungkin belum yang terbaru.</div>'},10000);
  loaded=0;
  sub('members',function(a){M=a});sub('pay',function(a){P=a});sub('exp',function(a){X=a});
  sub('log',function(a){LOG=a},db.collection('log').orderBy('ts','desc').limit(40));
  var f2=true;db.doc('cfg/main').onSnapshot(function(s){if(s.exists)CFG=s.data();if(f2){f2=false;loaded++}if(loaded>=5){clearTimeout(tmo);$('#note').innerHTML='';fill()}},function(){});
  nav();show()}
+ $('#role').onclick=function(){
+ var a=firebase.auth();
+ if(a.currentUser){a.signOut();return}
+ var e=prompt('Email bendahara:'),p=e&&prompt('Password:');
+ if(e&&p)a.signInWithEmailAndPassword(e,p).catch(function(){alert('Email atau password salah')})};
 init();
 })();
 </script></body></html>
