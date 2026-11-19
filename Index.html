@@ -196,7 +196,15 @@ function sub(col,set,q2){var first=true;(q2||db.collection(col)).onSnapshot(func
 async function init(){
  nav();$('#view').innerHTML='<p class="sm">Memuat…</p>';
   try{
-  firebase.initializeApp({apiKey:"ISI",authDomain:"ISI",projectId:"ISI"}); // salin dari Firebase Console
+  firebase.initializeApp({
+  apiKey: "AIzaSyDzBP0ULv5qs-TB5ygQcT8YJDYyD39kjiE",
+  authDomain: "://firebaseapp.com",
+  projectId: "kas-kelas-b3e65",
+  storageBucket: "kas-kelas-b3e65.firebasestorage.app",
+  messagingSenderId: "423093944122",
+  appId: "1:423093944122:web:b87e9413efbfe5dc8fda03"
+});
+
   db=firebase.firestore();
   firebase.auth().onAuthStateChanged(function(u){
    canEdit=!!u;
