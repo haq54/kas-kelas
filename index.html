@@ -2,6 +2,10 @@
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kas Kelas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1F4E79">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;
@@ -215,7 +219,7 @@ async function init(){
   try{
   firebase.initializeApp({
   apiKey: "AIzaSyDzBP0ULv5qs-TB5ygQcT8YJDYyD39kjiE",
-  authDomain: "://firebaseapp.com",
+  authDomain: "kas-kelas-b3e65.firebaseapp.com",
   projectId: "kas-kelas-b3e65",
   storageBucket: "kas-kelas-b3e65.firebasestorage.app",
   messagingSenderId: "423093944122",
@@ -249,5 +253,6 @@ $('#lgF').onsubmit=function(ev){
   .then(function(){b.disabled=false;b.textContent='Masuk'})};
 $('#lgLupa').onclick=function(){var e=$('#lgE').value.trim(),er=$('#lgErr');if(!e){er.textContent='Isi email dulu, lalu ketuk Lupa kata sandi.';return}firebase.auth().sendPasswordResetEmail(e).then(function(){er.textContent='Jika email terdaftar, tautan reset sudah dikirim.'}).catch(function(){er.textContent='Gagal mengirim. Cek email dan koneksi.'})};
 init();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 })();
 </script></body></html>
