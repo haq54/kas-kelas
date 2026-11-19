@@ -219,11 +219,18 @@ async function init(){
  sub('log',function(a){LOG=a},db.collection('log').orderBy('ts','desc').limit(40));
  var f2=true;db.doc('cfg/main').onSnapshot(function(s){if(s.exists)CFG=s.data();if(f2){f2=false;loaded++}if(loaded>=5){clearTimeout(tmo);$('#note').innerHTML='';fill()}},function(){});
  nav();show()}
- $('#role').onclick=function(){
- var a=firebase.auth();
- if(a.currentUser){a.signOut();return}
- var e=prompt('Email bendahara:'),p=e&&prompt('Password:');
- if(e&&p)a.signInWithEmailAndPassword(e,p).catch(function(){alert('Email atau password salah')})};
+function bukaLogin(){$('#lgn').hidden=false;$('#lgE').focus()}
+function tutupLogin(){$('#lgn').hidden=true;$('#lgS').value='';$('#lgErr').textContent=''}
+$('#role').onclick=function(){var a=firebase.auth();if(a.currentUser){if(confirm('Keluar dari akun bendahara?'))a.signOut()}else bukaLogin()};
+$('#lgBatal').onclick=tutupLogin;
+$('#lgF').onsubmit=function(ev){
+ ev.preventDefault();
+ var b=$('#lgBtn'),er=$('#lgErr');er.textContent='';b.disabled=true;b.textContent='Memproses…';
+ firebase.auth().signInWithEmailAndPassword($('#lgE').value.trim(),$('#lgS').value)
+  .then(tutupLogin)
+  .catch(function(x){er.textContent=x.code==='auth/network-request-failed'?'Tidak ada koneksi internet.':x.code==='auth/too-many-requests'?'Terlalu banyak percobaan. Coba lagi nanti.':'Email atau kata sandi salah.'})
+  .then(function(){b.disabled=false;b.textContent='Masuk'})};
+$('#lgLupa').onclick=function(){var e=$('#lgE').value.trim(),er=$('#lgErr');if(!e){er.textContent='Isi email dulu, lalu ketuk Lupa kata sandi.';return}firebase.auth().sendPasswordResetEmail(e).then(function(){er.textContent='Jika email terdaftar, tautan reset sudah dikirim.'}).catch(function(){er.textContent='Gagal mengirim. Cek email dan koneksi.'})};
 init();
 })();
 </script></body></html>
