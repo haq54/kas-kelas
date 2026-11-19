@@ -1,4 +1,4 @@
-var V='kas-kelas-v1',SHELL=['./','index.html','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png'];
+var V='kas-kelas-v1',SHELL=['./','index.html','manifest.json','icon_192x192.png','icon_512x512.png'];
 self.addEventListener('install',function(e){e.waitUntil(caches.open(V).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}))});
 self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(n){return n!==V}).map(function(n){return caches.delete(n)}))}).then(function(){return self.clients.claim()}))});
 self.addEventListener('fetch',function(e){
