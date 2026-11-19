@@ -211,19 +211,35 @@ async function init(){
    $('#role').textContent=canEdit?'Bendahara (ketuk untuk keluar)':'Hanya lihat (ketuk untuk masuk)';
    fill()});
  }catch(e){db=null}
- $('#role').textContent=canEdit?'Bendahara (bisa edit)':'Hanya lihat';
- if(!db){$('#view').innerHTML='<div class="alert red">Koneksi ke server gagal. Cek internet lalu muat ulang.</div>';return}
- tmo=setTimeout(function(){$('#note').innerHTML='<div class="alert">Data belum terjangkau, mungkin belum yang terbaru.</div>'},10000);
- loaded=0;
- sub('members',function(a){M=a});sub('pay',function(a){P=a});sub('exp',function(a){X=a});
- sub('log',function(a){LOG=a},db.collection('log').orderBy('ts','desc').limit(40));
- var f2=true;db.doc('cfg/main').onSnapshot(function(s){if(s.exists)CFG=s.data();if(f2){f2=false;loaded++}if(loaded>=5){clearTimeout(tmo);$('#note').innerHTML='';fill()}},function(){});
- nav();show()}
+ var mEl=document.createElement('div');
+ mEl.id='loginModal';mEl.hidden=true;
+ mEl.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:999';
+ mEl.innerHTML='<form id="lForm" class="card" style="width:100%;max-width:380px;padding:22px;gap:14px;box-shadow:0 12px 30px rgba(0,0,0,.3)">'+
+  '<div><h2 style="font-size:1.3rem">Masuk Bendahara</h2><p class="sm" style="margin-top:4px">Masuk untuk mencatat dan mengelola kas kelas.</p></div>'+
+  '<div><span class="lab" style="display:block;margin-bottom:6px">Email</span><input id="lEmail" type="email" placeholder="bendahara@kaskelas.com" required></div>'+
+  '<div><span class="lab" style="display:block;margin-bottom:6px">Kata Sandi</span><input id="lPass" type="password" placeholder="Masukkan kata sandi" required></div>'+
+  '<p id="lErr" class="err" hidden></p>'+
+  '<button type="submit" class="btn" id="lBtn" style="width:100%;margin-top:4px">Masuk</button>'+
+  '<button type="button" class="btn ghost" id="lCancel" style="width:100%">Batal</button>'+
+ '</form>';
+ document.body.appendChild(mEl);
+
  $('#role').onclick=function(){
- var a=firebase.auth();
- if(a.currentUser){a.signOut();return}
- var e=prompt('Email bendahara:'),p=e&&prompt('Password:');
- if(e&&p)a.signInWithEmailAndPassword(e,p).catch(function(){alert('Email atau password salah')})};
+  var a=firebase.auth();
+  if(a.currentUser){if(confirm('Keluar dari akun bendahara?'))a.signOut();return}
+  $('#lErr').hidden=true;$('#lPass').value='';
+  mEl.hidden=false;$('#lEmail').focus();
+ };
+ $('#lCancel').onclick=function(){mEl.hidden=true};
+ mEl.onclick=function(ev){if(ev.target===mEl)mEl.hidden=true};
+ $('#lForm').onsubmit=function(ev){
+  ev.preventDefault();
+  var btn=$('#lBtn'),err=$('#lErr');
+  btn.disabled=true;btn.textContent='Memproses…';err.hidden=true;
+  firebase.auth().signInWithEmailAndPassword($('#lEmail').value.trim(),$('#lPass').value)
+   .then(function(){mEl.hidden=true;btn.disabled=false;btn.textContent='Masuk'})
+   .catch(function(){err.textContent='Email atau kata sandi salah.';err.hidden=false;btn.disabled=false;btn.textContent='Masuk'});
+ };
 init();
 })();
 </script></body></html>
