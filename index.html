@@ -41,6 +41,9 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{padding:6px 4px
 .pv{font-size:.85rem;border-top:1px solid var(--line);padding:4px 0;display:flex;gap:8px}.pv span:last-child{margin-left:auto}
 .err{color:var(--out);font-size:.88rem;margin:0}.ok{color:var(--in);font-size:.88rem;margin:0}
 .in{color:var(--in)}.out{color:var(--out)}
+ #lgn{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.lgc{width:100%;max-width:400px;gap:12px;padding:22px}
+.lnk{background:none;border:0;color:var(--accent);text-decoration:underline;font:inherit;font-size:.88rem;cursor:pointer;align-self:center;padding:6px}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -48,6 +51,20 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{padding:6px 4px
 </head><body><div class="wrap">
 <header><h1>Kas Kelas</h1><span class="badge" id="role">Memuat…</span></header>
 <nav id="nav"></nav><div id="note"></div><div id="view"></div></div>
+ <div id="lgn" hidden>
+ <form id="lgF" class="card lgc">
+  <h1>Kas Kelas</h1>
+  <p class="sm">Masuk sebagai bendahara untuk mengubah data kas.</p>
+  <label class="lab" for="lgE">Email</label>
+  <input id="lgE" type="email" autocomplete="username" placeholder="nama@email.com" required>
+  <label class="lab" for="lgS">Kata sandi</label>
+  <input id="lgS" type="password" autocomplete="current-password" placeholder="Kata sandi" required>
+  <div id="lgErr" class="sm" role="alert" style="color:var(--out)"></div>
+  <button class="btn" id="lgBtn" type="submit" style="width:100%">Masuk</button>
+  <button class="btn ghost" id="lgBatal" type="button" style="width:100%">Kembali</button>
+  <button class="lnk" id="lgLupa" type="button">Lupa kata sandi?</button>
+ </form>
+ </div>
 <script>
 (function(){
 var $=function(s){return document.querySelector(s)};
