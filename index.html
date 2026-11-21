@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kas Kelas</title>
 <meta name="description" content="Pencatatan kas kelas">
-<meta name="theme-color" content="#111413">
+<meta name="theme-color" content="#1F4E79">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon_192x192.png">
 <link rel="apple-touch-icon" href="icon_192x192.png">
@@ -130,6 +130,9 @@ th:first-child, td:first-child { text-align: left; }
 th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-top: 0; }
 .pv { font-size: .85rem; border-top: 1px solid var(--line); padding: 4px 0; display: flex; gap: 8px; align-items: center; }
 .pv > :nth-last-child(1):not(:first-child) { margin-left: auto; }
+.hv { flex-wrap: wrap; }
+.acts { display: flex; gap: 6px; }
+.ed { border-top: 1px solid var(--line); padding: 8px 0; display: flex; flex-direction: column; gap: 8px; }
 
 /* ===== Layar login ===== */
 #lgn { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -201,6 +204,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   var tab = 'home', sel = null, sortBy = 'nama', q = '';
   var loaded = 0, loadTimer = null;
   var armed = '', armTimer = null;   // konfirmasi hapus dua ketukan
+  var ed = null;                     // catatan yang sedang diubah: {a, id, tgl, jml, ket}
   var PV = [];                       // pratinjau impor
 
   /* =========================================================
@@ -417,7 +421,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
   $('#nav').addEventListener('click', function (e) {
     var b = e.target.closest('button');
-    if (b) { tab = b.dataset.t; show(); }
+    if (b) { tab = b.dataset.t; ed = null; show(); }
   });
 
   /* =========================================================
@@ -599,6 +603,17 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       catatLog('Hapus catatan keluar', x.ket + ' ' + rp(x.jumlah));
     }
 
+    if (a === 'ep' || a === 'ex') {
+      var rec = (a === 'ep' ? P : X).find(function (r) { return r.id === id; });
+      if (!rec) return;
+      armed = '';
+      ed = { a: a, id: id, tgl: rec.tgl || today(), jml: Number(rec.jumlah).toLocaleString('id-ID'), ket: rec.ket || '' };
+      fill();
+    }
+
+    if (a === 'hb') { ed = null; fill(); }
+    if (a === 'hs') simpanUbah(id);
+
     if (a === 'dm') {
       if (!arm('dm' + id)) return;
       tulis(db.doc('members/' + id).delete());
@@ -777,6 +792,14 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
    * Tab: Catat
    * ========================================================= */
   function fCatat() {
+    // simpan ketikan yang sedang berlangsung supaya tidak hilang saat data diperbarui
+    if (ed && $('#htg')) {
+      ed.tgl = $('#htg').value;
+      ed.jml = $('#hjm').value;
+      if ($('#hkt')) ed.ket = $('#hkt').value;
+    }
+    if (ed && !(ed.a === 'ep' ? P : X).some(function (r) { return r.id === ed.id; })) ed = null;
+
     var s = $('#pm'), pilihan = s.value;
     var aktif = D.filter(isAktif).sort(byNama);
 
@@ -788,19 +811,67 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
     var masuk = P.map(function (p) {
       var pm = M.find(function (m) { return m.id === p.mid; }) || {};
-      return { id: p.id, tgl: p.tgl, t: 'in', ket: pm.nama || '?', j: p.jumlah, a: 'dp' };
+      return { id: p.id, tgl: p.tgl, t: 'in', ket: pm.nama || '?', j: p.jumlah, a: 'dp', e: 'ep' };
     });
     var keluar = X.filter(function (x) { return x.kind !== 'kembali'; }).map(function (x) {
-      return { id: x.id, tgl: x.tgl, t: 'out', ket: x.ket, j: x.jumlah, a: 'dx' };
+      return { id: x.id, tgl: x.tgl, t: 'out', ket: x.ket, j: x.jumlah, a: 'dx', e: 'ex' };
     });
     var H = masuk.concat(keluar).sort(terbaru).slice(0, 12);
 
     $('#hist').innerHTML = H.map(function (h) {
-      return '<div class="pv"><span>' + esc(h.tgl) + '</span><span>' + esc(h.ket) + '</span>' +
+      if (ed && ed.id === h.id && ed.a === h.e) {
+        return '<div class="ed">' +
+                 '<b class="sm">Ubah ' + (h.t === 'in' ? 'iuran: ' + esc(h.ket) : 'pengeluaran') + '</b>' +
+                 (h.t === 'out' ? '<input id="hkt" value="' + esc(ed.ket) + '" placeholder="Keperluan">' : '') +
+                 '<div class="row"><input id="htg" type="date" value="' + esc(ed.tgl) + '">' +
+                   '<input id="hjm" inputmode="numeric" value="' + esc(ed.jml) + '" placeholder="Jumlah (Rp)"></div>' +
+                 '<div class="row"><button class="btn sm2" data-a="hs" data-id="' + h.id + '">Simpan perubahan</button>' +
+                   '<button class="btn ghost sm2" data-a="hb" data-id="' + h.id + '">Batal</button></div>' +
+                 '<p id="hmsg" class="err"></p>' +
+               '</div>';
+      }
+      return '<div class="pv hv"><span>' + esc(h.tgl) + '</span><span>' + esc(h.ket) + '</span>' +
              '<span class="mono ' + h.t + '">' + (h.t === 'in' ? '+' : '-') + rp(h.j) + '</span>' +
-             '<button class="btn ghost sm2 del" data-a="' + h.a + '" data-id="' + h.id + '">' +
-               (armed === h.a + h.id ? 'Yakin?' : 'Hapus') + '</button></div>';
+             '<span class="acts">' +
+               '<button class="btn ghost sm2" data-a="' + h.e + '" data-id="' + h.id + '">Ubah</button>' +
+               '<button class="btn ghost sm2 del" data-a="' + h.a + '" data-id="' + h.id + '">' +
+                 (armed === h.a + h.id ? 'Yakin?' : 'Hapus') + '</button>' +
+             '</span></div>';
     }).join('') || '<p class="sm">Belum ada catatan.</p>';
+    if ($('#hjm')) maskRupiah($('#hjm'));
+  }
+
+  /** Simpan perubahan satu catatan (tanggal, jumlah, keperluan). Anggota tidak bisa diganti. */
+  function simpanUbah(id) {
+    if (!ed || ed.id !== id) return;
+    var isPay = ed.a === 'ep';
+    var rec = (isPay ? P : X).find(function (r) { return r.id === id; });
+    if (!rec) { ed = null; fill(); return; }
+
+    var t = $('#htg').value, j = num($('#hjm').value);
+    var k = isPay ? '' : $('#hkt').value.trim().replace(/\s+/g, ' ');
+    if (!t || !j || (!isPay && !k)) {
+      $('#hmsg').textContent = isPay ? 'Isi tanggal dan jumlah.' : 'Isi keperluan, tanggal, dan jumlah.';
+      return;
+    }
+
+    var ubah = [];
+    if (t !== rec.tgl) ubah.push('tgl ' + rec.tgl + ' menjadi ' + t);
+    if (j !== rec.jumlah) ubah.push(rp(rec.jumlah) + ' menjadi ' + rp(j));
+    if (!isPay && k !== rec.ket) ubah.push('keperluan "' + rec.ket + '" menjadi "' + k + '"');
+
+    ed = null;
+    if (ubah.length) {
+      if (isPay) {
+        var pm = M.find(function (m) { return m.id === rec.mid; }) || {};
+        tulis(db.doc('pay/' + id).update({ tgl: t, jumlah: j }));
+        catatLog('Ubah iuran', (pm.nama || '?') + ': ' + ubah.join('; '));
+      } else {
+        tulis(db.doc('exp/' + id).update({ tgl: t, ket: k, jumlah: j }));
+        catatLog('Ubah catatan keluar', rec.ket + ': ' + ubah.join('; '));
+      }
+    }
+    fill();
   }
 
   function tambahIuran(e) {
