@@ -201,7 +201,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 <body>
 <div class="wrap">
   <header>
-    <h1>Kas Kelas</h1>
+    <h1 id="ttl">Kas Kelas</h1>
     <div class="hb">
       <button type="button" class="badge" id="gear">Pengaturan</button>
       <button type="button" class="badge" id="role">Memuat…</button>
@@ -224,6 +224,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     <input id="lgS" type="password" autocomplete="current-password" placeholder="Kata sandi" required>
     <div id="lgErr" class="sm" role="alert" style="color:var(--out)"></div>
     <button class="btn" id="lgBtn" type="submit">Masuk</button>
+    <button class="btn ghost" id="lgDaftar" type="button">Daftar akun baru</button>
     <button class="btn ghost" id="lgBatal" type="button">Kembali</button>
     <button class="lnk" id="lgLupa" type="button">Lupa kata sandi?</button>
   </form>
@@ -254,6 +255,8 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   var M = [];                        // anggota (mentah)
   var P = [];                        // pembayaran iuran
   var X = [];                        // pengeluaran (termasuk pengembalian)
+  var KODE = '', RNAMA = '', pesanRoom = '', ROLES = {}, isHost = false, fdb = null, unsubRoles = null;
+  var ALFABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // tanpa I, O (mirip 1, 0)
   var LOG = [];                      // riwayat perubahan
   var CFG = { base: 10000, naik: [] };
   var D = [];                        // anggota + hasil hitungan (derive)
@@ -340,9 +343,19 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     clearTimeout(armTimer);
     if (armed === k) { armed = ''; return true; }
     armed = k;
-    armTimer = setTimeout(function () { armed = ''; fill(); }, 3500);
-    fill();
+    armTimer = setTimeout(function () { armed = ''; segarkan(); }, 3500);
+    segarkan();
     return false;
+  }
+
+  /** Gambar ulang layar; untuk halaman berisi isian, ketikan dipertahankan. */
+  function segarkan() {
+    if (tab === 'set' && (sub === 'room' || sub === 'pengurus')) {
+      var ids = ['pu', 'pn', 'rk', 'rn'], v = {};
+      ids.forEach(function (i) { if ($('#' + i)) v[i] = $('#' + i).value; });
+      fSet();
+      ids.forEach(function (i) { if ($('#' + i) && v[i] != null) $('#' + i).value = v[i]; });
+    } else fill();
   }
 
   /** Tunggu hasil tulis ke Firestore: true bila berhasil, false (dengan pemberitahuan) bila ditolak. */
@@ -370,6 +383,199 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
   function nimDipakai(nim, kecuali) {
     return !!nim && M.some(function (m) { return m.nim === nim && m.id !== kecuali; });
+  }
+
+  /* =========================================================
+   * Room (banyak kelompok dalam satu aplikasi)
+   * ========================================================= */
+  function normKode(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  function kodeSah(s) { return /^[A-Z0-9]{6,8}$/.test(s); }
+  function daftarRoom() {
+    try {
+      var a = JSON.parse(lsGet('kk-rooms') || '[]');
+      return Array.isArray(a) ? a.filter(function (r) { return r && kodeSah(r.kode); }) : [];
+    } catch (e) { return []; }
+  }
+  function simpanRoom(kode, nama) {
+    var a = daftarRoom().filter(function (r) { return r.kode !== kode; });
+    a.unshift({ kode: kode, nama: nama || kode });
+    lsSet('kk-rooms', JSON.stringify(a.slice(0, 12)));
+  }
+  function lupakanRoom(kode) {
+    lsSet('kk-rooms', JSON.stringify(daftarRoom().filter(function (r) { return r.kode !== kode; })));
+  }
+  function muatUlang() { if (location.search) location.replace(location.pathname); else location.reload(); }
+  function pilihRoom(kode, nama) { simpanRoom(kode, nama); lsSet('kk-room-aktif', kode); muatUlang(); }
+
+  /** Pintasan ke data satu room: groups/{kode}/... */
+  function ruang(kode) {
+    var root = fdb.collection('groups').doc(kode);
+    return {
+      collection: function (c) { return root.collection(c); },
+      doc: function (p) { var a = p.split('/'); return root.collection(a[0]).doc(a[1]); },
+      batch: function () { return fdb.batch(); }
+    };
+  }
+
+  function buatKode() {
+    var a = new Uint8Array(6);
+    crypto.getRandomValues(a);
+    return Array.prototype.map.call(a, function (v) { return ALFABET.charAt(v % 32); }).join('');
+  }
+  function kodeBebas(sisa) {
+    var k = buatKode();
+    return fdb.collection('groups').doc(k).get().then(function (s) {
+      if (!s.exists) return k;
+      if (sisa <= 1) throw new Error('kode');
+      return kodeBebas(sisa - 1);
+    });
+  }
+
+  function salin(teks, tombol) {
+    var ok = false;
+    try { navigator.clipboard.writeText(teks); ok = true; } catch (e) {}
+    if (!ok) {
+      var ta = document.createElement('textarea');
+      ta.value = teks; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e2) {}
+      document.body.removeChild(ta);
+    }
+    if (tombol) tombol.textContent = 'Tersalin';
+  }
+
+  function terapkanPeran() {
+    var u = auth && auth.currentUser;
+    var p = u ? ROLES[u.uid] : '';
+    canEdit = p === 'host' || p === 'bendahara';
+    isHost = p === 'host';
+    $('#role').textContent = isHost ? 'Host' : canEdit ? 'Bendahara' : 'Hanya lihat';
+    if (!canEdit && tab === 'catat') tab = 'home';
+    if (!canEdit && (sub === 'anggota' || sub === 'iuran')) sub = '';
+    if (!isHost && sub === 'pengurus') sub = '';
+    pengingat = '';
+    show();
+  }
+
+  function masukRoom() {
+    var k = normKode($('#rk').value), msg = $('#rmsg');
+    if (!kodeSah(k)) { msg.className = 'err'; msg.textContent = 'Kode terdiri dari 6 sampai 8 huruf atau angka.'; return; }
+    msg.className = 'sm'; msg.textContent = 'Mencari room…';
+    fdb.collection('groups').doc(k).get().then(function (s) {
+      if (!s.exists) { msg.className = 'err'; msg.textContent = 'Kode tidak ditemukan. Periksa lagi kodenya.'; return; }
+      pilihRoom(k, s.data().nama);
+    }).catch(function () { msg.className = 'err'; msg.textContent = 'Belum bisa menghubungi server. Cek internet.'; });
+  }
+
+  function buatRoom(tombol) {
+    var u = auth && auth.currentUser, msg = $('#rmsg');
+    if (!u) { msg.className = 'err'; msg.textContent = 'Masuk atau daftar akun dulu.'; return; }
+    var nama = $('#rn').value.trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (nama.length < 3) { msg.className = 'err'; msg.textContent = 'Nama room minimal 3 huruf.'; return; }
+    msg.className = 'sm'; msg.textContent = 'Membuat room…';
+    tombol.disabled = true;
+    var kodeBaru;
+    kodeBebas(5).then(function (kode) {
+      kodeBaru = kode;
+      var root = fdb.collection('groups').doc(kode), b = fdb.batch();
+      var roles = { label: {} };
+      roles[u.uid] = 'host';
+      roles.label[u.uid] = u.email || 'Host';
+      b.set(root, { nama: nama, pembuat: u.uid, dibuat: Date.now() });
+      b.set(root.collection('akses').doc('roles'), roles);
+      return b.commit();
+    }).then(function () {
+      var r = ruang(kodeBaru), b2 = fdb.batch();
+      b2.set(r.doc('cfg/main'), { base: 10000, naik: [] });
+      b2.set(r.collection('log').doc(), { ts: Date.now(), aksi: 'Room dibuat', ket: nama });
+      return b2.commit();
+    }).then(function () { pilihRoom(kodeBaru, nama); })
+      .catch(function () {
+        tombol.disabled = false;
+        msg.className = 'err';
+        msg.textContent = 'Gagal membuat room. Cek internet dan coba lagi.';
+      });
+  }
+
+  /** Cek apakah masih ada data Kas Kelas versi lama (di luar room) yang belum dipindahkan. */
+  function cekDataLama() {
+    if (!isHost || !KODE || lsGet('kk-salin-' + KODE)) return;
+    if (M.length || P.length || X.length) return;
+    fdb.collection('members').limit(1).get().then(function (s) {
+      var b = $('#lama');
+      if (b && !s.empty) b.hidden = false;
+    }).catch(function () {});
+  }
+
+  function salinDataLama(tombol) {
+    var msg = $('#slmsg'), nm = ['members', 'pay', 'exp', 'log'];
+    msg.className = 'sm'; msg.textContent = 'Membaca data lama…';
+    tombol.disabled = true;
+    Promise.all(nm.map(function (c) { return fdb.collection(c).get(); }).concat([fdb.doc('cfg/main').get()]))
+      .then(function (h) {
+        var op = [];
+        nm.forEach(function (c, i) {
+          h[i].docs.forEach(function (d) { op.push([db.collection(c).doc(d.id), d.data()]); });
+        });
+        if (h[4].exists) op.push([db.doc('cfg/main'), h[4].data()]);
+        var p = Promise.resolve(), n = 0;
+        for (var i = 0; i < op.length; i += 400) {
+          (function (potong) {
+            p = p.then(function () {
+              var b = fdb.batch();
+              potong.forEach(function (o) { b.set(o[0], o[1]); });
+              return b.commit().then(function () { n += potong.length; msg.textContent = 'Menyalin… ' + n + ' dari ' + op.length; });
+            });
+          })(op.slice(i, i + 400));
+        }
+        return p.then(function () { return op.length; });
+      })
+      .then(function (n) {
+        lsSet('kk-salin-' + KODE, '1');
+        msg.className = 'ok';
+        msg.textContent = n + ' data berhasil disalin ke room ini. Data lama tidak dihapus.';
+      })
+      .catch(function () {
+        tombol.disabled = false;
+        msg.className = 'err';
+        msg.textContent = 'Penyalinan gagal. Cek internet lalu ketuk lagi (aman diulang).';
+      });
+  }
+
+  function tulisPeran(nr, aksi, ket) {
+    return simpan(function (b) { b.set(db.doc('akses/roles'), nr); }, aksi, ket);
+  }
+  function salinanPeran() {
+    var nr = JSON.parse(JSON.stringify(ROLES));
+    if (!nr.label) nr.label = {};
+    return nr;
+  }
+  function tambahPengurus() {
+    var uid = $('#pu').value.trim(), nama = $('#pn').value.trim().replace(/\s+/g, ' ').slice(0, 30), msg = $('#pmsg2');
+    if (!/^[A-Za-z0-9]{20,40}$/.test(uid)) { msg.className = 'err'; msg.textContent = 'Kode akun tidak valid. Minta yang bersangkutan menyalinnya dari Pengaturan > Akun.'; return; }
+    if (ROLES[uid]) { msg.className = 'err'; msg.textContent = 'Akun itu sudah menjadi pengurus.'; return; }
+    var nr = salinanPeran();
+    nr[uid] = 'bendahara';
+    nr.label[uid] = nama || 'Bendahara';
+    msg.className = 'sm'; msg.textContent = 'Menyimpan…';
+    $('#pu').value = $('#pn').value = '';
+    tulisPeran(nr, 'Tambah pengurus', nr.label[uid]).then(function (ok) {
+      var el = $('#pmsg2');
+      if (el) { el.className = ok ? 'ok' : 'err'; el.textContent = ok ? 'Ditambahkan sebagai bendahara.' : 'Gagal menyimpan.'; }
+    });
+  }
+  function hapusPengurus(uid) {
+    if (!arm('prm' + uid) || ROLES[uid] !== 'bendahara') return;
+    var nr = salinanPeran(), nm = nr.label[uid] || 'Bendahara';
+    delete nr[uid]; delete nr.label[uid];
+    tulisPeran(nr, 'Hapus pengurus', nm);
+  }
+  function alihHost(uid) {
+    var u = auth.currentUser;
+    if (!arm('th' + uid) || ROLES[uid] !== 'bendahara' || !u) return;
+    var nr = salinanPeran(), nm = nr.label[uid] || 'Bendahara';
+    nr[uid] = 'host';
+    nr[u.uid] = 'bendahara';
+    tulisPeran(nr, 'Alih jabatan Host', 'Host baru: ' + nm);
   }
 
   /* =========================================================
@@ -509,7 +715,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     derive();
     keepEd();
     if (tab === 'set') {
-      if (sub === 'anggota') return;                       // form impor jangan dibangun ulang saat data berubah
+      if (sub === 'anggota' || sub === 'room' || sub === 'pengurus') return;   // halaman berisi isian jangan dibangun ulang saat data berubah
       if (sub === 'iuran') { updIuran(); return; }
       fSet();
       return;
@@ -709,10 +915,26 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     if (th) { lsSet('kk-tema', th); fSet(); return; }
     if (uk) { lsSet('kk-ukuran', uk); fSet(); return; }
 
+    if (a === 'out') { if (arm('out')) auth.signOut(); return; }
+    if (a === 'ckd') { salin(KODE, b); return; }
+    if (a === 'ctl') { salin(location.origin + location.pathname + '?r=' + KODE, b); return; }
+    if (a === 'cuid') { salin(auth.currentUser.uid, b); return; }
+    if (a === 'gr') { var rr = daftarRoom().filter(function (x) { return x.kode === id; })[0]; pilihRoom(id, rr && rr.nama); return; }
+    if (a === 'jr') { masukRoom(); return; }
+    if (a === 'br') { buatRoom(b); return; }
+    if (a === 'kroom') {
+      if (!arm('kroom')) return;
+      lupakanRoom(KODE); lsSet('kk-room-aktif', ''); muatUlang();
+      return;
+    }
+
     if (!db || !canEdit) return;
+    if (a === 'sl' && isHost) { salinDataLama(b); return; }
+    if (a === 'pad' && isHost) { tambahPengurus(); return; }
+    if (a === 'prm' && isHost) { hapusPengurus(id); return; }
+    if (a === 'thost' && isHost) { alihHost(id); return; }
     var m = D.find(function (x) { return x.id === id; });
 
-    if (a === 'out') { if (arm('out')) auth.signOut(); return; }
     if (a === 'kel') { openSet('anggota'); return; }
     if (a === 'more') { histN += 20; fill(); return; }
     if (a === 'rem') { pengingat = teksPengingat(); fHome(); return; }
@@ -1135,7 +1357,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   /* =========================================================
    * Pengaturan: daftar -> sub-halaman
    * ========================================================= */
-  var SET_JUDUL = { akun: 'Akun', anggota: 'Kelola anggota', iuran: 'Iuran', tampilan: 'Tampilan', tentang: 'Tentang' };
+  var SET_JUDUL = { akun: 'Akun', room: 'Room', pengurus: 'Pengurus', anggota: 'Kelola anggota', iuran: 'Iuran', tampilan: 'Tampilan', tentang: 'Tentang' };
   var TEMA = ['auto', 'light', 'dark', 'hitam', 'biru', 'mawar'];
   var TEMA_BAR = { light: '#F2F4F1', dark: '#0F1613', hitam: '#000000', biru: '#222F4C', mawar: '#F6E7E3' };
   var UKURAN = ['75', '88', '100', '118'];
@@ -1146,7 +1368,9 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     anggota: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6M16 4.5a3.5 3.5 0 010 7M18 14c2.5.6 4 2.6 4 6"/></svg>',
     iuran: '<svg viewBox="0 0 24 24"><path d="M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M3 7l12-3v3M16 14h2"/></svg>',
     tampilan: '<svg viewBox="0 0 24 24"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg>',
-    tentang: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>'
+    tentang: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
+    room: '<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></svg>',
+    pengurus: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/></svg>'
   };
 
   function applyTema() {
@@ -1174,10 +1398,14 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
   function fSet() {
     renderNav();
+    if (!KODE) sub = 'room';
     var tm = applyTema(), uk = applyUkuran();
     var h = '';
     if (!sub) {
-      var it = [['akun', 'Akun', canEdit ? 'Bendahara' : 'Hanya lihat (ketuk untuk masuk)']];
+      var u0 = auth && auth.currentUser;
+      var it = [['akun', 'Akun', u0 ? esc(u0.email || 'Sudah masuk') : 'Belum masuk'],
+                ['room', 'Room', KODE ? esc((RNAMA || '') + ' · ' + KODE) : 'Masuk atau buat room']];
+      if (isHost) it.push(['pengurus', 'Pengurus', 'Bendahara dan Host']);
       if (canEdit) {
         it.push(['anggota', 'Kelola anggota', 'Tambah dan impor anggota']);
         it.push(['iuran', 'Iuran', 'Sekarang ' + rp(nominal(cur())) + ' per bulan']);
@@ -1188,11 +1416,69 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
         return '<button type="button" data-go="' + x[0] + '">' + IC[x[0]] + '<span><b>' + x[1] + '</b><small>' + esc(x[2]) + '</small></span></button>';
       }).join('') + '</div>';
     } else if (sub === 'akun') {
-      h = '<div class="card">' + (canEdit
-        ? '<p class="sm">Kamu masuk sebagai bendahara dan bisa mengubah data kas.</p>' +
+      var u1 = auth && auth.currentUser;
+      h = '<div class="card">' + (u1
+        ? '<p>' + esc(u1.email || 'Sudah masuk') + '</p>' +
+          '<p class="sm">Peran di room ini: <b>' + (isHost ? 'Host' : canEdit ? 'Bendahara' : 'Hanya lihat') + '</b></p>' +
           '<button class="btn ghost" type="button" data-a="out">' + (armed === 'out' ? 'Yakin keluar?' : 'Keluar') + '</button>'
-        : '<p class="sm">Kamu melihat sebagai anggota (hanya lihat). Masuk sebagai bendahara untuk mengubah data.</p>' +
-          '<button class="btn" type="button" data-a="in">Masuk sebagai bendahara</button>') + '</div>';
+        : '<p class="sm">Masuk atau daftar akun untuk membuat room atau menjadi pengurus. Anggota biasa tidak perlu akun.</p>' +
+          '<button class="btn" type="button" data-a="in">Masuk atau daftar</button>') + '</div>' +
+        (u1 ? '<div class="card"><h2>Kode akun</h2>' +
+          '<p class="sm">Berikan kode ini ke Host supaya kamu bisa diangkat menjadi bendahara.</p>' +
+          '<p class="mono" style="word-break:break-all">' + esc(u1.uid) + '</p>' +
+          '<button class="btn ghost" type="button" data-a="cuid">Salin kode akun</button></div>' : '');
+    } else if (sub === 'room') {
+      var lain = daftarRoom().filter(function (r) { return r.kode !== KODE; });
+      var u2 = auth && auth.currentUser;
+      h = (pesanRoom ? '<div class="alert red">' + esc(pesanRoom) + '</div>' : '') +
+        (KODE
+          ? '<div class="card"><h2>' + esc(RNAMA || 'Room') + '</h2>' +
+              '<p class="sm">Kode room (bagikan ke anggota supaya bisa melihat kas)</p>' +
+              '<p class="big mono">' + esc(KODE) + '</p>' +
+              '<div class="row"><button class="btn ghost" type="button" data-a="ckd">Salin kode</button>' +
+              '<button class="btn ghost" type="button" data-a="ctl">Salin tautan</button></div>' +
+              '<button class="btn ghost del" type="button" data-a="kroom">' + (armed === 'kroom' ? 'Yakin keluar dari room?' : 'Keluar dari room ini') + '</button>' +
+              '<p class="sm">Keluar hanya melepas room dari perangkat ini. Data tidak terhapus.</p>' +
+            '</div>' +
+            (isHost ? '<div class="card" id="lama" hidden><h2>Data Kas Kelas lama</h2>' +
+              '<p class="sm">Ditemukan data dari versi aplikasi sebelumnya. Salin sekali saja ke room ini, supaya anggota, iuran, dan riwayat lama ikut terbawa.</p>' +
+              '<button class="btn" type="button" data-a="sl">Salin data lama ke room ini</button><p id="slmsg" class="sm"></p></div>' : '')
+          : '<div class="card"><p class="sm">Masukkan kode room untuk melihat kas, atau buat room baru.</p></div>') +
+        (lain.length
+          ? '<div class="card"><h2>Ganti room</h2><div class="smenu">' + lain.map(function (r) {
+              return '<button type="button" data-a="gr" data-id="' + esc(r.kode) + '">' + IC.room + '<span><b>' + esc(r.nama) + '</b><small>' + esc(r.kode) + '</small></span></button>';
+            }).join('') + '</div></div>'
+          : '') +
+        '<div class="card"><h2>Masuk dengan kode</h2>' +
+          '<div class="row"><input id="rk" placeholder="Kode room" maxlength="8" autocapitalize="characters" autocomplete="off">' +
+          '<button class="btn" type="button" data-a="jr">Masuk</button></div></div>' +
+        '<div class="card"><h2>Buat room baru</h2>' +
+          (u2
+            ? '<input id="rn" placeholder="Nama kelompok (mis. Kas Fisika A)" maxlength="40">' +
+              '<button class="btn" type="button" data-a="br">Buat room</button>' +
+              '<p class="sm">Kamu otomatis menjadi Host. Kode room dibuat otomatis.</p>'
+            : '<p class="sm">Untuk membuat room kamu perlu akun.</p><button class="btn" type="button" data-a="in">Masuk atau daftar</button>') +
+        '</div><p id="rmsg" class="sm"></p>';
+    } else if (sub === 'pengurus') {
+      var me = auth.currentUser ? auth.currentUser.uid : '';
+      var lb = ROLES.label || {};
+      var baris = Object.keys(ROLES).filter(function (k) { return k !== 'label'; })
+        .sort(function (x, y) { return (ROLES[x] === 'host' ? 0 : 1) - (ROLES[y] === 'host' ? 0 : 1); })
+        .map(function (k) {
+          return '<div class="kv"><span>' + esc(lb[k] || 'Tanpa nama') + (k === me ? ' (kamu)' : '') +
+            '<br><small class="sm">' + (ROLES[k] === 'host' ? 'Host' : 'Bendahara') + '</small></span>' +
+            (ROLES[k] === 'bendahara'
+              ? '<span class="acts"><button class="btn ghost sm2" type="button" data-a="thost" data-id="' + esc(k) + '">' + (armed === 'th' + k ? 'Yakin?' : 'Jadikan Host') + '</button>' +
+                '<button class="btn ghost sm2 del" type="button" data-a="prm" data-id="' + esc(k) + '">' + (armed === 'prm' + k ? 'Yakin?' : 'Hapus') + '</button></span>'
+              : '') + '</div>';
+        }).join('');
+      h = '<div class="card"><h2>Pengurus room</h2>' + baris +
+            '<p class="sm">Host dan bendahara bisa mengubah data kas. Hanya Host yang mengatur pengurus. Jadikan Host akan memindahkan jabatan Host kepadanya, dan kamu menjadi bendahara.</p></div>' +
+          '<div class="card"><h2>Tambah bendahara</h2>' +
+            '<p class="sm">Calon bendahara mendaftar akun dulu, lalu menyalin Kode akun dari Pengaturan &gt; Akun dan mengirimkannya kepadamu.</p>' +
+            '<input id="pu" placeholder="Kode akun calon bendahara" autocomplete="off">' +
+            '<input id="pn" placeholder="Nama panggilan" maxlength="30">' +
+            '<button class="btn" type="button" data-a="pad">Tambah</button><p id="pmsg2" class="err"></p></div>';
     } else if (sub === 'anggota') {
       h = '<div class="card"><h2>Tambah anggota</h2>' +
             '<div class="row"><input id="an" placeholder="Nama"><input id="ai" inputmode="numeric" placeholder="NIM">' +
@@ -1241,11 +1527,12 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
             }).join('') + '</div>' +
           '<p class="sm">Contoh: saldo kas kelas <b class="mono">Rp 1.250.000</b></p></div>';
     } else if (sub === 'tentang') {
-      h = '<div class="card"><p><b>Kas Kelas</b> &middot; versi 1.2</p>' +
-          '<p class="sm">Catatan kas disimpan di server dan bisa dilihat siapa saja yang memegang tautan aplikasi ini: nama anggota, NIM, dan status bayar. Hanya bendahara yang bisa mengubahnya.</p></div>';
+      h = '<div class="card"><p><b>Kas Kelas</b> &middot; versi 2.0</p>' +
+          '<p class="sm">Catatan kas disimpan di server dan bisa dilihat siapa saja yang tahu kode room: nama anggota, NIM, dan status bayar. Hanya Host dan bendahara yang bisa mengubahnya. Jaga kode room, dan jangan membagikannya di tempat umum.</p></div>';
     }
     $('#view').innerHTML = '<div class="wrap"><div class="shead"><h2>' + (sub ? SET_JUDUL[sub] : 'Pengaturan') +
-      '</h2><button class="lnk" type="button" data-a="sback">&larr; Kembali</button></div>' + h + '</div>';
+      '</h2>' + (KODE ? '<button class="lnk" type="button" data-a="sback">&larr; Kembali</button>' : '') + '</div>' + h + '</div>';
+    if (sub === 'room') cekDataLama();
     if (sub === 'iuran') { maskRupiah($('#cn')); maskRupiah($('#cb')); updIuran(); }
   }
 
@@ -1289,6 +1576,20 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
           'Email atau kata sandi salah.';
       })
       .then(function () { btn.disabled = false; btn.textContent = 'Masuk'; });
+  };
+
+  $('#lgDaftar').onclick = function () {
+    var er = $('#lgErr'), email = $('#lgE').value.trim(), pw = $('#lgS').value;
+    if (!auth) return;
+    if (!email || pw.length < 6) { er.textContent = 'Isi email dan kata sandi (minimal 6 karakter), lalu ketuk Daftar.'; return; }
+    er.textContent = 'Mendaftar…';
+    auth.createUserWithEmailAndPassword(email, pw).then(tutupLogin).catch(function (x) {
+      er.textContent =
+        x.code === 'auth/email-already-in-use' ? 'Email itu sudah terdaftar. Ketuk Masuk.' :
+        x.code === 'auth/weak-password' ? 'Kata sandi terlalu lemah (minimal 6 karakter).' :
+        x.code === 'auth/invalid-email' ? 'Format email salah.' :
+        x.code === 'auth/network-request-failed' ? 'Tidak ada koneksi internet.' : 'Gagal mendaftar.';
+    });
   };
 
   $('#lgLupa').onclick = function () {
@@ -1340,29 +1641,57 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     renderNav();
     $('#view').innerHTML = '<p class="sm">Memuat…</p>';
 
+    var dariUrl = '';
+    try { dariUrl = normKode(new URLSearchParams(location.search).get('r')); } catch (e) {}
+    KODE = kodeSah(dariUrl) ? dariUrl : normKode(lsGet('kk-room-aktif'));
+    if (!kodeSah(KODE)) KODE = '';
+    if (KODE && dariUrl === KODE) lsSet('kk-room-aktif', KODE);
+
     try {
       firebase.initializeApp(FIREBASE_CONFIG);
-      db = firebase.firestore();
+      fdb = firebase.firestore();
       auth = firebase.auth();
-      db.enablePersistence({ synchronizeTabs: true }).catch(function () {});   // data tetap terbaca saat sinyal buruk
+      fdb.enablePersistence({ synchronizeTabs: true }).catch(function () {});   // data tetap terbaca saat sinyal buruk
     } catch (e) {
-      db = null;
+      fdb = null;
     }
 
-    if (!db) {
+    if (!fdb) {
       $('#role').textContent = 'Hanya lihat';
       $('#view').innerHTML = '<div class="alert red">Koneksi ke server gagal. Cek internet lalu muat ulang.</div>';
       return;
     }
 
+    db = KODE ? ruang(KODE) : null;
+    var rn = daftarRoom().filter(function (r) { return r.kode === KODE; })[0];
+    if (rn) { RNAMA = rn.nama; $('#ttl').textContent = RNAMA; }
+
     auth.onAuthStateChanged(function (u) {
-      canEdit = !!u;
-      $('#role').textContent = canEdit ? 'Bendahara' : 'Hanya lihat';
-      if (!canEdit && tab === 'catat') tab = 'home';
-      if (!canEdit && (sub === 'anggota' || sub === 'iuran')) sub = '';
-      pengingat = '';
-      show();
+      if (unsubRoles) { unsubRoles(); unsubRoles = null; }
+      ROLES = {};
+      if (u && db) {
+        unsubRoles = db.doc('akses/roles').onSnapshot(function (s) {
+          ROLES = s.exists ? s.data() : {};
+          terapkanPeran();
+        }, function () { ROLES = {}; terapkanPeran(); });
+      }
+      terapkanPeran();
     });
+
+    if (!KODE) { tab = 'set'; sub = 'room'; show(); return; }
+
+    fdb.collection('groups').doc(KODE).onSnapshot(function (s) {
+      if (s.exists) {
+        RNAMA = s.data().nama || KODE;
+        $('#ttl').textContent = RNAMA;
+        simpanRoom(KODE, RNAMA);
+      } else if (!s.metadata.fromCache) {
+        pesanRoom = 'Room ' + KODE + ' tidak ditemukan. Periksa kodenya.';
+        lupakanRoom(KODE); lsSet('kk-room-aktif', '');
+        KODE = ''; db = null; RNAMA = ''; $('#ttl').textContent = 'Kas Kelas';
+        openSet('room');
+      }
+    }, function () {});
 
     loadTimer = setTimeout(function () {
       note('Data belum terjangkau, mungkin belum yang terbaru.');
