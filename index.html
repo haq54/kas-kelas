@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
+<script>try { var _t = localStorage.getItem('kk-tema'); if (['light', 'dark', 'hitam', 'biru', 'mawar'].indexOf(_t) > -1) document.documentElement.setAttribute('data-theme', _t); var _u = localStorage.getItem('kk-ukuran'); if (['75', '88', '100', '118'].indexOf(_u) > -1) document.documentElement.style.fontSize = _u + '%'; } catch (e) {}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kas Kelas</title>
 <meta name="description" content="Pencatatan kas kelas">
@@ -15,6 +16,7 @@
 /* ===== Tema ===== */
 :root {
   color-scheme: light;
+  --bg-img: none;
   --bg: #F2F4F1;  --surface: #fff;  --field: #F6F8F5;
   --ink: #16231F; --muted: #5E6B66; --line: #DCE2DD;
   --accent: #1F4E79; --accent-ink: #fff;
@@ -26,7 +28,7 @@
   --fm: "IBM Plex Mono", ui-monospace, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     color-scheme: dark;
     --bg: #0F1613;  --surface: #18221E;  --field: #121B17;
     --ink: #E7EEEA; --muted: #93A39B; --line: #2A3832;
@@ -37,14 +39,44 @@
   }
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0F1613;  --surface: #18221E;  --field: #121B17;
+  --ink: #E7EEEA; --muted: #93A39B; --line: #2A3832;
+  --accent: #7FB0E0; --accent-ink: #0F1613;
+  --in: #5CC58D;  --in-soft: #173126;
+  --out: #F0897A; --out-soft: #3A1D19;
+  --warn: #E6C265; --warn-soft: #3A311A;
+}
+:root[data-theme="hitam"] {
+  color-scheme: dark;
+  --bg: #000000; --surface: #111413; --field: #0A0C0B; --ink: #ECECEC; --muted: #9A9F9C;
+  --line: #262A28; --accent: #7FB0E0; --accent-ink: #000000; --in: #5CC58D; --in-soft: #0F2A1D;
+  --out: #F0897A; --out-soft: #2E1612; --warn: #E6C265; --warn-soft: #2A2410;
+}
+:root[data-theme="biru"] {
+  color-scheme: dark;
+  --bg: #1B2740; --bg-img: linear-gradient(180deg, #222F4C 0%, #1B2740 100%);
+  --surface: #26344F; --field: #202C45; --ink: #E8EDF5; --muted: #A3B0C6;
+  --line: #36466A; --accent: #9DB8E0; --accent-ink: #1B2740; --in: #7FCFA6; --in-soft: #1F3D3F;
+  --out: #F0A596; --out-soft: #4A2F3E; --warn: #F0D58E; --warn-soft: #4A4030;
+}
+:root[data-theme="mawar"] {
+  color-scheme: light;
+  --bg: #F3E4E1; --bg-img: linear-gradient(180deg, #F6E7E3 0%, #EBD5D2 100%);
+  --surface: #FBF3F1; --field: #F5E8E5; --ink: #2E1D1D; --muted: #6B5453;
+  --line: #E2CBC8; --accent: #8C2F39; --accent-ink: #FFFFFF; --in: #176B42; --in-soft: #DDEEDF;
+  --out: #A8322A; --out-soft: #F6DAD5; --warn: #7A5200; --warn-soft: #F7E8C3;
+}
+
 /* ===== Dasar ===== */
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg); background-image: var(--bg-img); background-attachment: fixed;
   color: var(--ink);
-  font: 15px/1.5 var(--fb);
+  font: .9375rem/1.5 var(--fb);
   padding: calc(20px + env(safe-area-inset-top, 0px))
            max(14px, env(safe-area-inset-right, 0px))
            calc(40px + env(safe-area-inset-bottom, 0px))
@@ -134,6 +166,26 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 .acts { display: flex; gap: 6px; }
 .ed { border-top: 1px solid var(--line); padding: 8px 0; display: flex; flex-direction: column; gap: 8px; }
 
+/* ===== Pengaturan, progres, tema ===== */
+.hb { display: flex; gap: 6px; align-items: center; }
+.shead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.shead .lnk { align-self: auto; }
+.smenu { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.smenu button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.smenu button:last-child { border-bottom: 0; }
+.smenu svg { width: 22px; height: 22px; flex: none; fill: none; stroke: var(--muted); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.smenu b { display: block; font-weight: 600; }
+.smenu small { display: block; color: var(--muted); font-size: .85rem; margin-top: 2px; overflow-wrap: anywhere; }
+.track { height: 8px; border-radius: 4px; background: var(--field); border: 1px solid var(--line); overflow: hidden; }
+.track > i { display: block; height: 100%; background: var(--in); border-radius: 4px; }
+.themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.themes button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 6px; border: 2px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font-size: .85rem; font-weight: 600; cursor: pointer; }
+.themes button[aria-pressed="true"], .sizes button[aria-pressed="true"] { border-color: var(--accent); }
+.themes .sw { display: block; width: 100%; height: 34px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, .45); }
+.sizes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.sizes button { min-height: 40px; border: 2px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font-weight: 600; cursor: pointer; }
+.kv { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; font-size: .9rem; }
+
 /* ===== Layar login ===== */
 #lgn { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .lgc { width: 100%; max-width: 400px; gap: 12px; padding: 22px; }
@@ -150,10 +202,14 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 <div class="wrap">
   <header>
     <h1>Kas Kelas</h1>
-    <button type="button" class="badge" id="role">Memuat…</button>
+    <div class="hb">
+      <button type="button" class="badge" id="gear">Pengaturan</button>
+      <button type="button" class="badge" id="role">Memuat…</button>
+    </div>
   </header>
   <nav id="nav"></nav>
   <div id="note"></div>
+  <div id="stale" class="alert" hidden>Menampilkan data yang tersimpan di HP. Belum tersambung ke server, jadi angkanya mungkin belum yang terbaru.</div>
   <div id="view"></div>
   <noscript><div class="alert red">Aplikasi ini membutuhkan JavaScript.</div></noscript>
 </div>
@@ -207,6 +263,13 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   var ed = null;                     // catatan yang sedang diubah: {a, id, tgl, jml, ket}
   var dup = '';                      // kunci catatan kembar yang sudah diperingatkan
   var PV = [];                       // pratinjau impor
+  var prevTab = 'home', sub = '';    // layar Pengaturan: tab sebelumnya dan sub-halamannya
+  var histN = 12;                    // jumlah catatan di tab Catat
+  var memEd = null;                  // ketikan di form ubah anggota (agar tidak hilang saat data diperbarui)
+  var pengingat = '';                // teks pesan pengingat yang sedang tampil
+  var filt = '';                     // filter status di tab Anggota
+  var tertunda = 0;                  // jumlah penyimpanan yang belum dikonfirmasi server
+  var dariCache = {}, staleTimer = null;
 
   /* =========================================================
    * Util
@@ -245,7 +308,8 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   var num = function (s) { return parseInt(String(s).replace(/\D/g, '') || '0', 10); };
 
   var byNama = function (a, b) { return a.nama.localeCompare(b.nama, 'id'); };
-  var terbaru = function (a, b) { return a.tgl < b.tgl ? 1 : -1; };
+  /* Terbaru dulu; tanggal sama diurutkan menurut waktu input supaya urutan tidak melompat. */
+  var terbaru = function (a, b) { return String(b.tgl || '').localeCompare(String(a.tgl || '')) || ((b.ts || 0) - (a.ts || 0)); };
   var isAktif = function (m) { return m.aktif !== false; };
 
   /** Daftar bulan 'YYYY-MM' dari a sampai b (inklusif). */
@@ -281,15 +345,27 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     return false;
   }
 
-  /** Tulis ke Firestore; beri tahu bendahara bila ditolak. */
+  /** Tunggu hasil tulis ke Firestore: true bila berhasil, false (dengan pemberitahuan) bila ditolak. */
   function tulis(promise) {
-    return promise.catch(function () {
+    tertunda++;
+    var tmr = setTimeout(function () { if (tertunda > 0) note('Menyimpan… menunggu koneksi. Jangan tutup aplikasi dulu.'); }, 2500);
+    return promise.then(function () { return true; }, function () {
       note('Gagal menyimpan. Cek koneksi atau izin akun.', 'red');
+      return false;
+    }).then(function (ok) {
+      clearTimeout(tmr);
+      tertunda--;
+      if (ok && !tertunda && /^Menyimpan/.test($('#note').textContent)) note('');
+      return ok;
     });
   }
 
-  function catatLog(aksi, ket) {
-    if (db) db.collection('log').add({ ts: Date.now(), aksi: aksi, ket: ket }).catch(function () {});
+  /** Satu perubahan = data + catatan riwayatnya, disimpan bersama atau tidak sama sekali. */
+  function simpan(isi, aksi, ket) {
+    var b = db.batch();
+    isi(b);
+    b.set(db.collection('log').doc(), { ts: Date.now(), aksi: aksi, ket: ket });
+    return tulis(b.commit());
   }
 
   function nimDipakai(nim, kecuali) {
@@ -349,6 +425,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     var t = [['home', 'Beranda'], ['anggota', 'Anggota'], ['catat', 'Catat'], ['laporan', 'Laporan']];
     if (!canEdit) t.splice(2, 1);
     var el = $('#nav');
+    el.hidden = tab === 'set';
     el.style.gridTemplateColumns = 'repeat(' + t.length + ', 1fr)';
     el.innerHTML = t.map(function (x) {
       return '<button data-t="' + x[0] + '" aria-pressed="' + (tab === x[0]) + '">' + x[1] + '</button>';
@@ -362,6 +439,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     renderNav();
     var v = $('#view');
 
+    if (tab === 'set') { fSet(); return; }
     if (!siap()) { v.innerHTML = '<p class="sm">Memuat…</p>'; return; }
 
     if (tab === 'home') {
@@ -373,16 +451,19 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
           '<div class="card">' +
             '<div class="row">' +
               '<input id="q" placeholder="Cari nama atau NIM" value="' + esc(q) + '">' +
-              '<select id="so"><option value="nama">Urut nama</option><option value="nim">Urut NIM</option></select>' +
+              '<select id="so"><option value="nama">Urut nama</option><option value="nim">Urut NIM</option><option value="kurang">Tunggakan terbesar</option></select>' +
+              '<select id="sf"><option value="">Semua status</option><option value="belum">Belum lunas</option><option value="lunas">Sudah lunas</option><option value="off">Nonaktif</option></select>' +
             '</div>' +
+            '<p class="sm" id="cnt"></p>' +
             '<div id="list"></div>' +
           '</div>' +
-          '<div id="adm" class="wrap"></div>' +
+          (canEdit ? '<button class="btn ghost" data-a="kel">Tambah atau impor anggota</button>' : '') +
         '</div>';
       $('#so').value = sortBy;
+      $('#sf').value = filt;
       $('#q').oninput = function () { q = this.value; fAnggota(); };
       $('#so').onchange = function () { sortBy = this.value; fAnggota(); };
-      renderAdmin();
+      $('#sf').onchange = function () { filt = this.value; fAnggota(); };
     }
     if (tab === 'catat') {
       v.innerHTML =
@@ -417,12 +498,29 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   function fill() {
     if (!siap()) return;
     derive();
+    keepEd();
+    if (tab === 'set') {
+      if (sub === 'anggota') return;                       // form impor jangan dibangun ulang saat data berubah
+      if (sub === 'iuran') { updIuran(); return; }
+      fSet();
+      return;
+    }
     ({ home: fHome, anggota: fAnggota, catat: fCatat, laporan: fLaporan })[tab]();
+  }
+
+  /** Simpan ketikan yang sedang berlangsung supaya tidak hilang saat data diperbarui. */
+  function keepEd() {
+    if (ed && $('#htg')) {
+      ed.tgl = $('#htg').value;
+      ed.jml = $('#hjm').value;
+      if ($('#hkt')) ed.ket = $('#hkt').value;
+    }
+    if (sel && $('#en') && $('#ei')) memEd = { id: sel, nama: $('#en').value, nim: $('#ei').value };
   }
 
   $('#nav').addEventListener('click', function (e) {
     var b = e.target.closest('button');
-    if (b) { tab = b.dataset.t; ed = null; dup = ''; show(); }
+    if (b) { tab = b.dataset.t; ed = null; dup = ''; pengingat = ''; memEd = null; show(); }
   });
 
   /* =========================================================
@@ -437,6 +535,13 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     var saldo = masuk - keluar - titipan;
     var belum = aktif.filter(function (m) { return m.kurang > 0; });
     var tunggakan = sum(aktif, function (m) { return m.kurang; });
+
+    // iuran bulan berjalan: siapa yang tagihan bulan ini sudah terpenuhi
+    var sk = cur();
+    var ditagih = aktif.filter(function (m) { return m.rows.length && m.rows[m.rows.length - 1].b === sk; });
+    var tTarget = sum(ditagih, function (m) { return m.rows[m.rows.length - 1].n; });
+    var tTerisi = sum(ditagih, function (m) { return m.rows[m.rows.length - 1].c; });
+    var tLunas = ditagih.filter(function (m) { var r = m.rows[m.rows.length - 1]; return r.c >= r.n; }).length;
 
     var pengeluaran = X.filter(function (x) { return x.kind !== 'kembali'; })
       .sort(terbaru).slice(0, 5)
@@ -459,6 +564,21 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       (belum.length
         ? '<div class="alert red">' + belum.length + ' anggota belum lunas &middot; total tunggakan ' + rp(tunggakan) + '. Lihat tab Anggota.</div>'
         : '<div class="alert green">Semua anggota aktif sudah lunas sampai ' + bln(cur()) + '.</div>') +
+      '<div class="card"><h2>Iuran ' + bln(sk) + '</h2>' +
+        (ditagih.length
+          ? '<p class="sm"><b>' + tLunas + ' dari ' + ditagih.length + ' anggota</b> sudah lunas bulan ini &middot; ' + rp(tTerisi) + ' dari ' + rp(tTarget) + '</p>' +
+            '<div class="track"><i style="width:' + Math.min(100, tTarget ? Math.round(tTerisi / tTarget * 100) : 0) + '%"></i></div>'
+          : '<p class="sm">Belum ada anggota yang ditagih bulan ini.</p>') +
+      '</div>' +
+      (canEdit && belum.length
+        ? '<div class="card"><h2>Pengingat tunggakan</h2>' +
+            (pengingat
+              ? '<textarea id="rt" readonly>' + esc(pengingat) + '</textarea>' +
+                '<div class="row"><button class="btn ghost" type="button" data-a="rcp">Salin</button>' +
+                '<a class="btn" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(pengingat) + '">Kirim lewat WhatsApp</a></div>'
+              : '<button class="btn ghost" type="button" data-a="rem">Buat pesan pengingat</button>') +
+          '</div>'
+        : '') +
       '<div class="card"><h2>Pengeluaran terakhir</h2>' +
         (pengeluaran || '<p class="sm">Belum ada pengeluaran.</p>') +
       '</div>';
@@ -476,13 +596,18 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   function fAnggota() {
     var f = q.toLowerCase();
     var L = D.filter(function (m) {
+      if (filt === 'belum' && !(isAktif(m) && m.kurang > 0)) return false;
+      if (filt === 'lunas' && !(isAktif(m) && m.kurang === 0)) return false;
+      if (filt === 'off' && isAktif(m)) return false;
       return !f || m.nama.toLowerCase().indexOf(f) > -1 || String(m.nim || '').indexOf(f) > -1;
     });
     L.sort(function (a, b) {
+      if (sortBy === 'kurang') return (b.kurang - a.kurang) || byNama(a, b);
       return sortBy === 'nim'
         ? String(a.nim || '').localeCompare(String(b.nim || ''), 'id', { numeric: true })
         : byNama(a, b);
     });
+    $('#cnt').textContent = L.length === D.length ? D.length + ' anggota' : L.length + ' dari ' + D.length + ' anggota';
 
     var html = L.map(function (m) {
       var row =
@@ -497,7 +622,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     }).join('');
 
     $('#list').innerHTML = html ||
-      '<p class="sm">' + (M.length ? 'Tidak ada yang cocok.' : 'Belum ada anggota.' + (canEdit ? ' Impor daftar di bawah.' : '')) + '</p>';
+      '<p class="sm">' + (M.length ? 'Tidak ada yang cocok.' : 'Belum ada anggota.' + (canEdit ? ' Ketuk Tambah atau impor anggota di bawah.' : '')) + '</p>';
   }
 
   function detail(m) {
@@ -513,20 +638,23 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       (m.selesai ? ' &middot; berhenti: ' + bln(m.selesai) : '') + '</p>';
 
     var riwayat = bayar.map(function (p) {
-      return '<div class="pv"><span>' + esc(p.tgl) + '</span><span class="mono in">' + rp(p.jumlah) + '</span>' +
+      if (ed && ed.a === 'ep' && ed.id === p.id) return editForm({ id: p.id, t: 'in', ket: m.nama });
+      return '<div class="pv hv"><span>' + esc(p.tgl) + '</span><span class="mono in">' + rp(p.jumlah) + '</span>' +
         (canEdit
-          ? '<span><button class="btn ghost sm2 del" data-a="dp" data-id="' + p.id + '">' +
+          ? '<span class="acts"><button class="btn ghost sm2" data-a="ep" data-id="' + p.id + '">Ubah</button>' +
+              '<button class="btn ghost sm2 del" data-a="dp" data-id="' + p.id + '">' +
               (armed === 'dp' + p.id ? 'Yakin?' : 'Hapus') + '</button></span>'
           : '') +
         '</div>';
     }).join('');
+    var mn = memEd && memEd.id === m.id ? memEd : { nama: m.nama, nim: m.nim };
 
     var h = '<div class="det">' + tabel + info + riwayat;
 
     if (canEdit) {
       h += '<div class="row">' +
-             '<input id="en" value="' + esc(m.nama) + '">' +
-             '<input id="ei" value="' + esc(m.nim) + '" inputmode="numeric">' +
+             '<input id="en" value="' + esc(mn.nama) + '">' +
+             '<input id="ei" value="' + esc(mn.nim) + '" inputmode="numeric">' +
              '<button class="btn sm2" data-a="sv" data-id="' + m.id + '">Simpan</button>' +
            '</div><p id="emsg" class="err"></p>' +
            '<div class="row">' +
@@ -546,31 +674,66 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
   /** Semua aksi tombol & ketukan baris di dalam #view. */
   $('#view').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-a]');
+    var g = e.target.closest('[data-go]');
+    if (g) { sub = g.dataset.go; PV = []; fSet(); window.scrollTo(0, 0); return; }
+
+    var b = e.target.closest('button[data-a], button[data-t], button[data-u]');
 
     if (!b) {
       var r = e.target.closest('[data-s]');
-      if (r) { sel = (sel === r.dataset.s) ? null : r.dataset.s; fAnggota(); }
+      if (r) { sel = (sel === r.dataset.s) ? null : r.dataset.s; memEd = null; ed = null; fAnggota(); }
       return;
     }
-    if (!db || !canEdit) return;
 
     var a = b.dataset.a, id = b.dataset.id;
+
+    // aksi yang boleh dipakai siapa saja
+    if (a === 'sback') {
+      if (sub) { sub = ''; fSet(); } else { tab = prevTab; show(); }
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (a === 'in') { bukaLogin(); return; }
+    var th = b.dataset.t, uk = b.dataset.u;
+    if (th) { lsSet('kk-tema', th); fSet(); return; }
+    if (uk) { lsSet('kk-ukuran', uk); fSet(); return; }
+
+    if (!db || !canEdit) return;
     var m = D.find(function (x) { return x.id === id; });
+
+    if (a === 'out') { if (arm('out')) auth.signOut(); return; }
+    if (a === 'kel') { openSet('anggota'); return; }
+    if (a === 'more') { histN += 20; fill(); return; }
+    if (a === 'rem') { pengingat = teksPengingat(); fHome(); return; }
+    if (a === 'rcp') {
+      var area = $('#rt');
+      if (area) area.select();
+      try { navigator.clipboard.writeText(pengingat); } catch (er) { document.execCommand('copy'); }
+      b.textContent = 'Tersalin';
+      return;
+    }
+    if (a === 'aok') { tambahAnggota(); return; }
+    if (a === 'ipr') { pratinjauImpor(); return; }
+    if (a === 'iok') { jalankanImpor(); return; }
+    if (a === 'iun') { batalkanImpor(); return; }
+    if (a === 'cok') { ubahIuran(); return; }
+    if (a === 'sb') { ubahBase(); return; }
+    if (a === 'dn') { hapusNaik(id); return; }
 
     if (a === 'sv') {
       var nama = $('#en').value.trim().replace(/\s+/g, ' ');
       var nim = $('#ei').value.trim();
       if (!nama) { $('#emsg').textContent = 'Nama tidak boleh kosong.'; return; }
       if (nimDipakai(nim, id)) { $('#emsg').textContent = 'NIM itu sudah dipakai anggota lain.'; return; }
-      tulis(db.doc('members/' + id).update({ nama: nama, nim: nim }));
-      catatLog('Ubah anggota', m.nama + ' (NIM ' + (m.nim || '-') + ') menjadi ' + nama + ' (NIM ' + (nim || '-') + ')');
+      memEd = null;
+      simpan(function (bt) { bt.update(db.doc('members/' + id), { nama: nama, nim: nim }); },
+        'Ubah anggota', m.nama + ' (NIM ' + (m.nim || '-') + ') menjadi ' + nama + ' (NIM ' + (nim || '-') + ')');
     }
 
     if (a === 'tg') {
       var aktifkan = (m.aktif === false);
-      tulis(db.doc('members/' + id).update(aktifkan ? { aktif: true, selesai: null } : { aktif: false, selesai: cur() }));
-      catatLog('Status anggota', m.nama + (aktifkan ? ' diaktifkan' : ' dinonaktifkan'));
+      simpan(function (bt) { bt.update(db.doc('members/' + id), aktifkan ? { aktif: true, selesai: null } : { aktif: false, selesai: cur() }); },
+        'Status anggota', m.nama + (aktifkan ? ' diaktifkan' : ' dinonaktifkan'));
     }
 
     if (a === 'dp') {
@@ -578,16 +741,14 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       var p = P.find(function (x) { return x.id === id; });
       if (!p) return;
       var pm = M.find(function (x) { return x.id === p.mid; }) || {};
-      tulis(db.doc('pay/' + id).delete());
-      catatLog('Hapus iuran', (pm.nama || '?') + ' ' + rp(p.jumlah) + ' tgl ' + p.tgl);
+      simpan(function (bt) { bt.delete(db.doc('pay/' + id)); }, 'Hapus iuran', (pm.nama || '?') + ' ' + rp(p.jumlah) + ' tgl ' + p.tgl);
     }
 
     if (a === 'dx') {
       if (!arm('dx' + id)) return;
       var x = X.find(function (z) { return z.id === id; });
       if (!x) return;
-      tulis(db.doc('exp/' + id).delete());
-      catatLog('Hapus catatan keluar', x.ket + ' ' + rp(x.jumlah));
+      simpan(function (bt) { bt.delete(db.doc('exp/' + id)); }, 'Hapus catatan keluar', x.ket + ' ' + rp(x.jumlah));
     }
 
     if (a === 'ep' || a === 'ex') {
@@ -603,74 +764,29 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
     if (a === 'dm') {
       if (!arm('dm' + id)) return;
-      tulis(db.doc('members/' + id).delete());
       sel = null;
-      catatLog('Hapus anggota', m.nama);
+      simpan(function (bt) { bt.delete(db.doc('members/' + id)); }, 'Hapus anggota', m.nama);
     }
   });
 
   /* =========================================================
    * Anggota: tambah, impor, iuran, pengingat
    * ========================================================= */
-  function renderAdmin() {
-    var h = $('#adm');
-    if (!canEdit) { h.innerHTML = ''; return; }
-
-    h.innerHTML =
-      '<div class="card"><h2>Tambah anggota</h2>' +
-        '<div class="row"><input id="an" placeholder="Nama"><input id="ai" inputmode="numeric" placeholder="NIM">' +
-        '<input id="am" type="month" value="' + cur() + '"></div>' +
-        '<button class="btn" id="aok">Tambah</button><p id="amsg" class="err"></p>' +
-      '</div>' +
-
-      '<div class="card"><h2>Impor massal</h2>' +
-        '<p class="sm">Tempel satu anggota per baris (nama dan NIM, dipisah tab, koma, atau spasi). Nomor urut di depan diabaikan.</p>' +
-        '<textarea id="ib" placeholder="Ahmad Haqi 2021001&#10;Budi Santoso, 2021002"></textarea>' +
-        '<div class="row"><label class="sm">Mulai ditagih bulan<input id="im" type="month" value="' + cur() + '"></label></div>' +
-        '<div id="ipv"></div>' +
-        '<div class="row"><button class="btn ghost" id="ipr">Pratinjau</button>' +
-        '<button class="btn" id="iok" hidden>Impor</button>' +
-        '<button class="btn ghost del" id="iun">Batalkan impor terakhir</button></div>' +
-        '<p id="imsg" class="sm"></p>' +
-      '</div>' +
-
-      '<div class="card"><h2>Pengaturan iuran</h2>' +
-        '<p class="sm">Iuran saat ini: ' + rp(nominal(cur())) + ' per bulan. Perubahan hanya berlaku mulai bulan yang dipilih, bulan lama tetap.</p>' +
-        '<div class="row"><input id="cn" inputmode="numeric" placeholder="Nominal baru">' +
-        '<input id="cm" type="month" value="' + cur() + '"><button class="btn" id="cok">Terapkan</button></div>' +
-      '</div>' +
-
-      '<div class="card"><h2>Pengingat tunggakan</h2>' +
-        '<button class="btn ghost" id="rem">Buat pesan pengingat</button>' +
-        '<textarea id="rt" hidden readonly></textarea><button class="btn" id="rcp" hidden>Salin</button>' +
-      '</div>';
-
-    maskRupiah($('#cn'));
-
-    $('#aok').onclick = tambahAnggota;
-    $('#ipr').onclick = pratinjauImpor;
-    $('#iok').onclick = jalankanImpor;
-    $('#iun').onclick = batalkanImpor;
-    $('#cok').onclick = ubahIuran;
-    $('#rem').onclick = buatPengingat;
-    $('#rcp').onclick = function () {
-      var t = $('#rt');
-      t.select();
-      try { navigator.clipboard.writeText(t.value); } catch (e) { document.execCommand('copy'); }
-      this.textContent = 'Tersalin';
-    };
-  }
-
   function tambahAnggota() {
     var nama = $('#an').value.trim().replace(/\s+/g, ' ');
     var nim = $('#ai').value.trim();
     var mulai = $('#am').value;
-    if (!nama || !mulai) { $('#amsg').textContent = 'Isi nama dan bulan mulai.'; return; }
-    if (nimDipakai(nim)) { $('#amsg').textContent = 'NIM itu sudah dipakai.'; return; }
-    tulis(db.collection('members').add({ nama: nama, nim: nim, mulai: mulai, aktif: true, ts: Date.now() }));
-    catatLog('Tambah anggota', nama);
+    var msg = $('#amsg');
+    if (!nama || !mulai) { msg.className = 'err'; msg.textContent = 'Isi nama dan bulan mulai.'; return; }
+    if (nimDipakai(nim)) { msg.className = 'err'; msg.textContent = 'NIM itu sudah dipakai.'; return; }
+    msg.className = 'sm';
+    msg.textContent = 'Menyimpan…';
     $('#an').value = $('#ai').value = '';
-    $('#amsg').textContent = '';
+    simpan(function (b) { b.set(db.collection('members').doc(), { nama: nama, nim: nim, mulai: mulai, aktif: true, ts: Date.now() }); },
+      'Tambah anggota', nama).then(function (ok) {
+      msg.className = ok ? 'ok' : 'err';
+      msg.textContent = ok ? nama + ' ditambahkan.' : 'Gagal menyimpan. Isi lagi dan coba ulang.';
+    });
   }
 
   function ubahIuran() {
@@ -678,22 +794,34 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     if (!v || !m) return;
     var naik = (CFG.naik || []).filter(function (x) { return x.dari !== m; });
     naik.push({ dari: m, nominal: v });
-    tulis(db.doc('cfg/main').set({ base: CFG.base || 10000, naik: naik }));
-    catatLog('Ubah iuran', rp(v) + ' mulai ' + bln(m));
+    $('#cn').value = '';
+    simpan(function (b) { b.set(db.doc('cfg/main'), { base: CFG.base || 10000, naik: naik }); },
+      'Ubah iuran', rp(v) + ' mulai ' + bln(m));
   }
 
-  function buatPengingat() {
+  function ubahBase() {
+    var v = num($('#cb').value);
+    if (!v) return;
+    $('#cb').value = '';
+    simpan(function (b) { b.set(db.doc('cfg/main'), { base: v, naik: CFG.naik || [] }); },
+      'Ubah iuran awal', rp(CFG.base || 10000) + ' menjadi ' + rp(v));
+  }
+
+  function hapusNaik(dari) {
+    if (!arm('dn' + dari)) return;
+    var naik = (CFG.naik || []).filter(function (x) { return x.dari !== dari; });
+    simpan(function (b) { b.set(db.doc('cfg/main'), { base: CFG.base || 10000, naik: naik }); },
+      'Hapus kenaikan iuran', 'mulai ' + bln(dari));
+  }
+
+  function teksPengingat() {
     var belum = D.filter(function (m) { return isAktif(m) && m.kurang > 0; }).sort(byNama);
-    var teks = belum.length
+    return belum.length
       ? 'Pengingat kas kelas (' + bln(cur()) + '). Yang belum lunas:\n' +
         belum.map(function (m, i) {
           return (i + 1) + '. ' + m.nama + (m.nim ? ' (' + m.nim + ')' : '') + ' - kurang ' + rp(m.kurang);
         }).join('\n') + '\nTerima kasih.'
       : 'Semua anggota sudah lunas.';
-    $('#rt').value = teks;
-    $('#rt').hidden = false;
-    $('#rcp').hidden = false;
-    $('#rcp').textContent = 'Salin';
   }
 
   /* ----- Impor massal ----- */
@@ -709,7 +837,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
           .replace(/[\t,;|]+/g, ' ')
           .replace(/\s[-–]\s/g, ' ')
           .replace(/\s+/g, ' ').trim().toLowerCase()
-          .replace(/(^|\s)\S/g, function (s) { return s.toUpperCase(); });
+          .replace(/(^|[\s-])\S/g, function (s) { return s.toUpperCase(); });
         return { nama: nama, nim: nim };
       });
   }
@@ -743,36 +871,42 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   }
 
   function jalankanImpor() {
-    var batch = Date.now(), mulai = $('#im').value, n = 0;
-    if (!mulai) return;
-    PV.forEach(function (r) {
-      if (r.s === 'bad' || !r.nama) return;
-      tulis(db.collection('members').add({ nama: r.nama, nim: r.nim, mulai: mulai, aktif: true, batch: batch, ts: batch }));
-      n++;
-    });
-    catatLog('Impor anggota', n + ' anggota, mulai ditagih ' + bln(mulai));
-    $('#ib').value = '';
-    $('#ipv').innerHTML = '';
+    var batch = Date.now(), mulai = $('#im').value;
+    var ok = PV.filter(function (r) { return r.s !== 'bad' && r.nama; });
+    var im = $('#imsg');
+    if (!mulai || !ok.length) return;
+    if (ok.length > 400) { im.textContent = 'Maksimal 400 anggota sekali impor. Bagi daftarnya.'; return; }
     $('#iok').hidden = true;
-    $('#imsg').textContent = n + ' anggota diimpor. Daftar urut nama.';
-    PV = [];
+    im.textContent = 'Menyimpan…';
+    simpan(function (b) {
+      ok.forEach(function (r) {
+        b.set(db.collection('members').doc(), { nama: r.nama, nim: r.nim, mulai: mulai, aktif: true, batch: batch, ts: batch });
+      });
+    }, 'Impor anggota', ok.length + ' anggota, mulai ditagih ' + bln(mulai)).then(function (berhasil) {
+      var el = $('#imsg');
+      if (!el) return;
+      if (!berhasil) { el.textContent = 'Impor gagal, tidak ada anggota yang tersimpan. Daftar di atas masih ada.'; $('#iok').hidden = false; return; }
+      el.textContent = ok.length + ' anggota diimpor. Daftar urut nama.';
+      $('#ib').value = '';
+      $('#ipv').innerHTML = '';
+      PV = [];
+    });
   }
 
   function batalkanImpor() {
     var batch = Math.max.apply(null, M.map(function (m) { return m.batch || 0; }));
-    if (!batch) { $('#imsg').textContent = 'Tidak ada impor yang bisa dibatalkan.'; return; }
-    if (armed !== 'undo') $('#imsg').textContent = 'Tekan sekali lagi untuk membatalkan impor terakhir.';
+    var im = $('#imsg');
+    if (!batch) { im.textContent = 'Tidak ada impor yang bisa dibatalkan.'; return; }
+    if (armed !== 'undo') im.textContent = 'Tekan sekali lagi untuk membatalkan impor terakhir.';
     if (!arm('undo')) return;
 
-    var n = 0;
-    M.forEach(function (m) {
-      if (m.batch === batch && !P.some(function (p) { return p.mid === m.id; })) {
-        tulis(db.doc('members/' + m.id).delete());
-        n++;
-      }
+    var hapus = M.filter(function (m) { return m.batch === batch && !P.some(function (p) { return p.mid === m.id; }); });
+    if (!hapus.length) { im.textContent = 'Semua anggota hasil impor terakhir sudah punya pembayaran, jadi dipertahankan.'; return; }
+    simpan(function (b) { hapus.forEach(function (m) { b.delete(db.doc('members/' + m.id)); }); },
+      'Batalkan impor', hapus.length + ' anggota dihapus').then(function (ok) {
+      var el = $('#imsg');
+      if (el) el.textContent = ok ? hapus.length + ' anggota hasil impor terakhir dihapus (yang sudah punya pembayaran dipertahankan).' : 'Gagal membatalkan.';
     });
-    catatLog('Batalkan impor', n + ' anggota dihapus');
-    $('#imsg').textContent = n + ' anggota hasil impor terakhir dihapus (yang sudah punya pembayaran dipertahankan).';
   }
 
   /* =========================================================
@@ -803,20 +937,15 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     var keluar = X.map(function (x) {   // catatan pengembalian lama ikut tampil agar bisa dihapus
       return { id: x.id, tgl: x.tgl, t: 'out', ket: x.ket, j: x.jumlah, a: 'dx', e: x.kind === 'kembali' ? '' : 'ex' };
     });
-    var H = masuk.concat(keluar).sort(terbaru).slice(0, 12);
+    var semuaH = masuk.concat(keluar).sort(terbaru);
+    var H = semuaH.slice(0, histN);
+    if (ed) {   // catatan yang sedang diubah tetap tampil walau bergeser dari daftar teratas
+      var edh = semuaH.filter(function (h) { return h.id === ed.id && h.e === ed.a; })[0];
+      if (edh && H.indexOf(edh) < 0) H.push(edh);
+    }
 
-    $('#hist').innerHTML = H.map(function (h) {
-      if (ed && ed.id === h.id && ed.a === h.e) {
-        return '<div class="ed">' +
-                 '<b class="sm">Ubah ' + (h.t === 'in' ? 'iuran: ' + esc(h.ket) : 'pengeluaran') + '</b>' +
-                 (h.t === 'out' ? '<input id="hkt" value="' + esc(ed.ket) + '" placeholder="Keperluan">' : '') +
-                 '<div class="row"><input id="htg" type="date" value="' + esc(ed.tgl) + '">' +
-                   '<input id="hjm" inputmode="numeric" value="' + esc(ed.jml) + '" placeholder="Jumlah (Rp)"></div>' +
-                 '<div class="row"><button class="btn sm2" data-a="hs" data-id="' + h.id + '">Simpan perubahan</button>' +
-                   '<button class="btn ghost sm2" data-a="hb" data-id="' + h.id + '">Batal</button></div>' +
-                 '<p id="hmsg" class="err"></p>' +
-               '</div>';
-      }
+    $('#hist').innerHTML = (H.map(function (h) {
+      if (ed && ed.id === h.id && ed.a === h.e) return editForm(h);
       return '<div class="pv hv"><span>' + esc(h.tgl) + '</span><span>' + esc(h.ket) + '</span>' +
              '<span class="mono ' + h.t + '">' + (h.t === 'in' ? '+' : '-') + rp(h.j) + '</span>' +
              '<span class="acts">' +
@@ -824,8 +953,22 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
                '<button class="btn ghost sm2 del" data-a="' + h.a + '" data-id="' + h.id + '">' +
                  (armed === h.a + h.id ? 'Yakin?' : 'Hapus') + '</button>' +
              '</span></div>';
-    }).join('') || '<p class="sm">Belum ada catatan.</p>';
+    }).join('') || '<p class="sm">Belum ada catatan.</p>') +
+      (semuaH.length > histN ? '<button class="btn ghost" type="button" data-a="more" style="margin-top:8px">Tampilkan lebih banyak</button>' : '');
     if ($('#hjm')) maskRupiah($('#hjm'));
+  }
+
+  /** Form ubah satu catatan; dipakai di tab Catat dan di rincian anggota. */
+  function editForm(h) {
+    return '<div class="ed">' +
+             '<b class="sm">Ubah ' + (h.t === 'in' ? 'iuran: ' + esc(h.ket) : 'pengeluaran') + '</b>' +
+             (h.t === 'out' ? '<input id="hkt" value="' + esc(ed.ket) + '" placeholder="Keperluan">' : '') +
+             '<div class="row"><input id="htg" type="date" value="' + esc(ed.tgl) + '">' +
+               '<input id="hjm" inputmode="numeric" value="' + esc(ed.jml) + '" placeholder="Jumlah (Rp)"></div>' +
+             '<div class="row"><button class="btn sm2" data-a="hs" data-id="' + h.id + '">Simpan perubahan</button>' +
+               '<button class="btn ghost sm2" data-a="hb" data-id="' + h.id + '">Batal</button></div>' +
+             '<p id="hmsg" class="err"></p>' +
+           '</div>';
   }
 
   /** Simpan perubahan satu catatan (tanggal, jumlah, keperluan). Anggota tidak bisa diganti. */
@@ -851,11 +994,9 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     if (ubah.length) {
       if (isPay) {
         var pm = M.find(function (m) { return m.id === rec.mid; }) || {};
-        tulis(db.doc('pay/' + id).update({ tgl: t, jumlah: j }));
-        catatLog('Ubah iuran', (pm.nama || '?') + ': ' + ubah.join('; '));
+        simpan(function (bt) { bt.update(db.doc('pay/' + id), { tgl: t, jumlah: j }); }, 'Ubah iuran', (pm.nama || '?') + ': ' + ubah.join('; '));
       } else {
-        tulis(db.doc('exp/' + id).update({ tgl: t, ket: k, jumlah: j }));
-        catatLog('Ubah catatan keluar', rec.ket + ': ' + ubah.join('; '));
+        simpan(function (bt) { bt.update(db.doc('exp/' + id), { tgl: t, ket: k, jumlah: j }); }, 'Ubah catatan keluar', rec.ket + ': ' + ubah.join('; '));
       }
     }
     fill();
@@ -878,17 +1019,18 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     }
     dup = '';
 
-    db.collection('pay').add({ mid: id, tgl: t, jumlah: j, ts: Date.now() })
-      .catch(function () { msg.className = 'err'; msg.textContent = 'Gagal menyimpan.'; });
-
-    catatLog('Catat iuran', m.nama + ' ' + rp(j) + ' tgl ' + t);
-
     var lebih = Math.max(0, m.paid + j - m.tagih);
-    msg.className = 'ok';
-    msg.textContent = 'Tersimpan: ' + m.nama + ' ' + rp(j) + '.' +
+    var pesan = 'Tersimpan: ' + m.nama + ' ' + rp(j) + '.' +
       (lebih > 0 ? ' Ada lebihan ' + rp(lebih) + ': otomatis menutup bulan berikutnya.' : '');
+    msg.className = 'sm';
+    msg.textContent = 'Menyimpan…';
     $('#pj').value = '';
     $('#pm').value = '';
+    simpan(function (b) { b.set(db.collection('pay').doc(), { mid: id, tgl: t, jumlah: j, ts: Date.now() }); },
+      'Catat iuran', m.nama + ' ' + rp(j) + ' tgl ' + t).then(function (ok) {
+      msg.className = ok ? 'ok' : 'err';
+      msg.textContent = ok ? pesan : 'Gagal menyimpan. Isi lagi dan coba ulang.';
+    });
   }
 
   function tambahPengeluaran(e) {
@@ -907,14 +1049,14 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     }
     dup = '';
 
-    db.collection('exp').add({ tgl: t, ket: k, jumlah: j, kind: 'keluar', ts: Date.now() })
-      .catch(function () { msg.className = 'err'; msg.textContent = 'Gagal menyimpan.'; });
-
-    catatLog('Catat pengeluaran', k + ' ' + rp(j) + ' tgl ' + t);
-
-    msg.className = 'ok';
-    msg.textContent = 'Tersimpan.';
+    msg.className = 'sm';
+    msg.textContent = 'Menyimpan…';
     $('#xk').value = $('#xj').value = '';
+    simpan(function (b) { b.set(db.collection('exp').doc(), { tgl: t, ket: k, jumlah: j, kind: 'keluar', ts: Date.now() }); },
+      'Catat pengeluaran', k + ' ' + rp(j) + ' tgl ' + t).then(function (ok) {
+      msg.className = ok ? 'ok' : 'err';
+      msg.textContent = ok ? 'Tersimpan.' : 'Gagal menyimpan. Isi lagi dan coba ulang.';
+    });
   }
 
   /* =========================================================
@@ -953,16 +1095,143 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   }
 
   /* =========================================================
+   * Pengaturan: daftar -> sub-halaman
+   * ========================================================= */
+  var SET_JUDUL = { akun: 'Akun', anggota: 'Kelola anggota', iuran: 'Iuran', tampilan: 'Tampilan', tentang: 'Tentang' };
+  var TEMA = ['auto', 'light', 'dark', 'hitam', 'biru', 'mawar'];
+  var TEMA_BAR = { light: '#F2F4F1', dark: '#0F1613', hitam: '#000000', biru: '#222F4C', mawar: '#F6E7E3' };
+  var UKURAN = ['75', '88', '100', '118'];
+  var lsGet = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  var lsSet = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+  var IC = {
+    akun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
+    anggota: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6M16 4.5a3.5 3.5 0 010 7M18 14c2.5.6 4 2.6 4 6"/></svg>',
+    iuran: '<svg viewBox="0 0 24 24"><path d="M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M3 7l12-3v3M16 14h2"/></svg>',
+    tampilan: '<svg viewBox="0 0 24 24"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg>',
+    tentang: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>'
+  };
+
+  function applyTema() {
+    var tm = lsGet('kk-tema');
+    if (TEMA.indexOf(tm) === -1) tm = 'auto';
+    if (tm === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', tm);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', tm === 'auto' ? '#1F4E79' : TEMA_BAR[tm]);
+    return tm;
+  }
+  function applyUkuran() {
+    var u = lsGet('kk-ukuran');
+    if (UKURAN.indexOf(u) === -1) u = '100';
+    document.documentElement.style.fontSize = u + '%';
+    return u;
+  }
+
+  function openSet(s) {
+    if (tab !== 'set') prevTab = tab;
+    tab = 'set'; sub = s || ''; ed = null; PV = []; pengingat = '';
+    show();
+    window.scrollTo(0, 0);
+  }
+
+  function fSet() {
+    renderNav();
+    var tm = applyTema(), uk = applyUkuran();
+    var h = '';
+    if (!sub) {
+      var it = [['akun', 'Akun', canEdit ? 'Bendahara' : 'Hanya lihat (ketuk untuk masuk)']];
+      if (canEdit) {
+        it.push(['anggota', 'Kelola anggota', 'Tambah dan impor anggota']);
+        it.push(['iuran', 'Iuran', 'Sekarang ' + rp(nominal(cur())) + ' per bulan']);
+      }
+      it.push(['tampilan', 'Tampilan', 'Tema warna dan ukuran teks']);
+      it.push(['tentang', 'Tentang', 'Versi dan privasi']);
+      h = '<div class="smenu">' + it.map(function (x) {
+        return '<button type="button" data-go="' + x[0] + '">' + IC[x[0]] + '<span><b>' + x[1] + '</b><small>' + esc(x[2]) + '</small></span></button>';
+      }).join('') + '</div>';
+    } else if (sub === 'akun') {
+      h = '<div class="card">' + (canEdit
+        ? '<p class="sm">Kamu masuk sebagai bendahara dan bisa mengubah data kas.</p>' +
+          '<button class="btn ghost" type="button" data-a="out">' + (armed === 'out' ? 'Yakin keluar?' : 'Keluar') + '</button>'
+        : '<p class="sm">Kamu melihat sebagai anggota (hanya lihat). Masuk sebagai bendahara untuk mengubah data.</p>' +
+          '<button class="btn" type="button" data-a="in">Masuk sebagai bendahara</button>') + '</div>';
+    } else if (sub === 'anggota') {
+      h = '<div class="card"><h2>Tambah anggota</h2>' +
+            '<div class="row"><input id="an" placeholder="Nama"><input id="ai" inputmode="numeric" placeholder="NIM">' +
+            '<input id="am" type="month" value="' + cur() + '"></div>' +
+            '<button class="btn" type="button" data-a="aok">Tambah</button><p id="amsg" class="err"></p>' +
+          '</div>' +
+          '<div class="card"><h2>Impor massal</h2>' +
+            '<p class="sm">Tempel satu anggota per baris (nama dan NIM, dipisah tab, koma, atau spasi). Nomor urut di depan diabaikan.</p>' +
+            '<textarea id="ib" placeholder="Ahmad Haqi 2021001&#10;Budi Santoso, 2021002"></textarea>' +
+            '<div class="row"><label class="sm">Mulai ditagih bulan<input id="im" type="month" value="' + cur() + '"></label></div>' +
+            '<div id="ipv"></div>' +
+            '<div class="row"><button class="btn ghost" type="button" data-a="ipr">Pratinjau</button>' +
+            '<button class="btn" type="button" data-a="iok" id="iok" hidden>Impor</button>' +
+            '<button class="btn ghost del" type="button" data-a="iun">Batalkan impor terakhir</button></div>' +
+            '<p id="imsg" class="sm"></p>' +
+          '</div>';
+    } else if (sub === 'iuran') {
+      h = '<div class="card"><h2>Iuran per bulan</h2><div id="nkList"></div></div>' +
+          '<div class="card"><h2>Ubah iuran</h2>' +
+            '<p class="sm">Perubahan hanya berlaku mulai bulan yang dipilih, bulan-bulan sebelumnya tetap.</p>' +
+            '<div class="row"><input id="cn" inputmode="numeric" placeholder="Nominal baru">' +
+            '<input id="cm" type="month" value="' + cur() + '"><button class="btn" type="button" data-a="cok">Terapkan</button></div>' +
+          '</div>' +
+          '<div class="card"><h2>Iuran awal</h2>' +
+            '<p class="sm">Nominal sebelum kenaikan pertama berlaku.</p>' +
+            '<div class="row"><input id="cb" inputmode="numeric" placeholder="Iuran awal"><button class="btn" type="button" data-a="sb">Simpan</button></div>' +
+          '</div>';
+    } else if (sub === 'tampilan') {
+      var sw = {
+        auto: 'linear-gradient(135deg,#F2F4F1 50%,#0F1613 50%)',
+        light: 'linear-gradient(90deg,#F2F4F1 55%,#FFFFFF 55% 80%,#1F4E79 80%)',
+        dark: 'linear-gradient(90deg,#0F1613 55%,#18221E 55% 80%,#7FB0E0 80%)',
+        hitam: 'linear-gradient(90deg,#000 55%,#111413 55% 80%,#7FB0E0 80%)',
+        biru: 'linear-gradient(90deg,#222F4C 55%,#26344F 55% 80%,#9DB8E0 80%)',
+        mawar: 'linear-gradient(90deg,#F3E4E1 55%,#FBF3F1 55% 80%,#8C2F39 80%)'
+      };
+      var nm = { auto: 'Otomatis', light: 'Terang', dark: 'Gelap', hitam: 'Hitam', biru: 'Biru', mawar: 'Mawar' };
+      var un = { '75': 'Mini', '88': 'Kecil', '100': 'Normal', '118': 'Besar' };
+      h = '<div class="card"><p class="sm">Tema warna (berlaku di perangkat ini)</p><div class="themes">' +
+            TEMA.map(function (k) {
+              return '<button type="button" data-t="' + k + '" aria-pressed="' + (k === tm) + '"><span class="sw" style="background:' + sw[k] + '"></span>' + nm[k] + '</button>';
+            }).join('') + '</div>' +
+          '<p class="sm" style="margin-top:8px">Ukuran teks (berlaku di perangkat ini)</p><div class="sizes">' +
+            UKURAN.map(function (k) {
+              return '<button type="button" data-u="' + k + '" aria-pressed="' + (k === uk) + '">' + un[k] + '</button>';
+            }).join('') + '</div>' +
+          '<p class="sm">Contoh: saldo kas kelas <b class="mono">Rp 1.250.000</b></p></div>';
+    } else if (sub === 'tentang') {
+      h = '<div class="card"><p><b>Kas Kelas</b> &middot; versi 1.1</p>' +
+          '<p class="sm">Catatan kas disimpan di server dan bisa dilihat siapa saja yang memegang tautan aplikasi ini: nama anggota, NIM, dan status bayar. Hanya bendahara yang bisa mengubahnya.</p></div>';
+    }
+    $('#view').innerHTML = '<div class="wrap"><div class="shead"><h2>' + (sub ? SET_JUDUL[sub] : 'Pengaturan') +
+      '</h2><button class="lnk" type="button" data-a="sback">&larr; Kembali</button></div>' + h + '</div>';
+    if (sub === 'iuran') { maskRupiah($('#cn')); maskRupiah($('#cb')); updIuran(); }
+  }
+
+  /** Daftar iuran di sub-halaman Iuran; dibangun ulang tanpa menyentuh kolom isian. */
+  function updIuran() {
+    var box = $('#nkList');
+    if (!box) return;
+    var naik = (CFG.naik || []).slice().sort(function (a, c) { return a.dari < c.dari ? -1 : 1; });
+    box.innerHTML = '<div class="kv"><span>Iuran awal</span><b class="mono">' + rp(CFG.base || 10000) + '</b></div>' +
+      naik.map(function (x) {
+        return '<div class="kv"><span>Mulai ' + bln(x.dari) + '</span><span class="acts"><b class="mono">' + rp(x.nominal) + '</b>' +
+          '<button class="btn ghost sm2 del" type="button" data-a="dn" data-id="' + esc(x.dari) + '">' + (armed === 'dn' + x.dari ? 'Yakin?' : 'Hapus') + '</button></span></div>';
+      }).join('') +
+      '<p class="sm">Bulan ini: ' + rp(nominal(cur())) + ' per bulan.</p>';
+  }
+
+  /* =========================================================
    * Login bendahara
    * ========================================================= */
   function bukaLogin() { $('#lgn').hidden = false; $('#lgE').focus(); }
   function tutupLogin() { $('#lgn').hidden = true; $('#lgS').value = ''; $('#lgErr').textContent = ''; }
 
-  $('#role').onclick = function () {
-    if (!auth) return;
-    if (auth.currentUser) { if (confirm('Keluar dari akun bendahara?')) auth.signOut(); }
-    else bukaLogin();
-  };
+  $('#role').onclick = function () { openSet('akun'); };
+  $('#gear').onclick = function () { openSet(''); };
   $('#lgBatal').onclick = tutupLogin;
 
   $('#lgF').onsubmit = function (ev) {
@@ -1004,18 +1273,32 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     }
   }
 
+  /** Tampilkan peringatan bila data yang terlihat masih dari simpanan HP dan server belum terjangkau. */
+  function cekStale() {
+    var dariHP = Object.keys(dariCache).some(function (k) { return dariCache[k]; });
+    if (!dariHP) { clearTimeout(staleTimer); staleTimer = null; $('#stale').hidden = true; return; }
+    if ($('#stale').hidden && !staleTimer) staleTimer = setTimeout(function () { staleTimer = null; $('#stale').hidden = false; }, 4000);
+  }
+
   /** Langganan realtime satu koleksi. */
-  function langganan(koleksi, simpan, query) {
+  function langganan(koleksi, simpanData, query) {
     var pertama = true;
-    (query || db.collection(koleksi)).onSnapshot(function (s) {
-      simpan(s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }));
-      if (pertama) { pertama = false; tandaiMuat(); } else { fill(); }
+    (query || db.collection(koleksi)).onSnapshot({ includeMetadataChanges: true }, function (s) {
+      dariCache[koleksi] = !!s.metadata.fromCache;
+      cekStale();
+      var ambil = function () { simpanData(s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); })); };
+      if (pertama) { pertama = false; ambil(); tandaiMuat(); return; }
+      if (!s.docChanges().length) return;   // hanya status sinkron yang berubah
+      ambil();
+      fill();
     }, function () {
       note('Data belum bisa dimuat.', 'red');
     });
   }
 
   function init() {
+    applyTema();
+    applyUkuran();
     renderNav();
     $('#view').innerHTML = '<p class="sm">Memuat…</p>';
 
@@ -1023,6 +1306,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
       auth = firebase.auth();
+      db.enablePersistence({ synchronizeTabs: true }).catch(function () {});   // data tetap terbaca saat sinyal buruk
     } catch (e) {
       db = null;
     }
@@ -1035,8 +1319,10 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
     auth.onAuthStateChanged(function (u) {
       canEdit = !!u;
-      $('#role').textContent = canEdit ? 'Bendahara (ketuk untuk keluar)' : 'Hanya lihat (ketuk untuk masuk)';
+      $('#role').textContent = canEdit ? 'Bendahara' : 'Hanya lihat';
       if (!canEdit && tab === 'catat') tab = 'home';
+      if (!canEdit && (sub === 'anggota' || sub === 'iuran')) sub = '';
+      pengingat = '';
       show();
     });
 
@@ -1053,7 +1339,9 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     db.doc('cfg/main').onSnapshot(function (s) {
       if (s.exists) CFG = s.data();
       if (cfgPertama) { cfgPertama = false; tandaiMuat(); } else { fill(); }
-    }, function () {});
+    }, function () {
+      if (cfgPertama) { cfgPertama = false; tandaiMuat(); }
+    });
   }
 
   init();
