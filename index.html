@@ -474,6 +474,13 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
             '<div class="row"><input id="pt" type="date" required><input id="pj" inputmode="numeric" placeholder="Jumlah (Rp)" required></div>' +
             '<button class="btn">Simpan iuran</button><p id="pmsg" class="sm"></p>' +
           '</form>' +
+          '<form id="fl" class="card">' +
+            '<h2>Catat pemasukan lain</h2>' +
+            '<p class="sm">Uang dari luar iuran, misalnya hadiah lomba atau donasi. Masuk ke kas umum, tidak mengubah status bayar anggota.</p>' +
+            '<input id="lk" placeholder="Asal uang, misalnya hadiah lomba" required>' +
+            '<div class="row"><input id="lt" type="date" required><input id="lj" inputmode="numeric" placeholder="Jumlah (Rp)" required></div>' +
+            '<button class="btn">Simpan pemasukan</button><p id="lmsg" class="sm"></p>' +
+          '</form>' +
           '<form id="fx" class="card">' +
             '<h2>Catat pengeluaran</h2>' +
             '<input id="xk" placeholder="Keperluan, misalnya fotokopi materi" required>' +
@@ -482,7 +489,9 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
           '</form>' +
           '<div class="card"><h2>Catatan terakhir</h2><div id="hist"></div></div>' +
         '</div>';
-      $('#pt').value = $('#xt').value = today();
+      $('#pt').value = $('#xt').value = $('#lt').value = today();
+      maskRupiah($('#lj'));
+      $('#fl').onsubmit = tambahLain;
       maskRupiah($('#pj'));
       maskRupiah($('#xj'));
       $('#fp').onsubmit = tambahIuran;
@@ -528,8 +537,9 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
    * ========================================================= */
   function fHome() {
     var aktif = D.filter(isAktif);
-    var masuk = sum(P, jml);
-    var keluar = sum(X, jml);
+    var lain = sum(X.filter(function (x) { return x.kind === 'masuk'; }), jml);   // uang dari luar iuran (hadiah, donasi)
+    var masuk = sum(P, jml) + lain;
+    var keluar = sum(X.filter(function (x) { return x.kind !== 'masuk'; }), jml);
     // lebihan anggota nonaktif tidak punya bulan berikutnya, jadi menjadi milik kas
     var titipan = sum(D.filter(isAktif), function (m) { return m.kredit; });
     var saldo = masuk - keluar - titipan;
@@ -543,7 +553,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     var tTerisi = sum(ditagih, function (m) { return m.rows[m.rows.length - 1].c; });
     var tLunas = ditagih.filter(function (m) { var r = m.rows[m.rows.length - 1]; return r.c >= r.n; }).length;
 
-    var pengeluaran = X.filter(function (x) { return x.kind !== 'kembali'; })
+    var pengeluaran = X.filter(function (x) { return x.kind !== 'kembali' && x.kind !== 'masuk'; })
       .sort(terbaru).slice(0, 5)
       .map(function (x) {
         return '<div class="pv"><span>' + esc(x.tgl) + '</span><span>' + esc(x.ket) + '</span>' +
@@ -557,7 +567,8 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
         '<p class="sm">Uang di tangan bendahara: ' + rp(masuk - keluar) +
           (titipan > 0 ? ' &middot; titipan anggota: ' + rp(titipan) : '') + '</p>' +
         '<div class="grid">' +
-          '<div><span class="lab in">Masuk</span><div class="mono">' + rp(masuk) + '</div></div>' +
+          '<div><span class="lab in">Masuk</span><div class="mono">' + rp(masuk) + '</div>' +
+            (lain > 0 ? '<span class="sm">termasuk ' + rp(lain) + ' pemasukan lain</span>' : '') + '</div>' +
           '<div><span class="lab out">Keluar</span><div class="mono">' + rp(keluar) + '</div></div>' +
         '</div>' +
       '</div>' +
@@ -748,7 +759,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       if (!arm('dx' + id)) return;
       var x = X.find(function (z) { return z.id === id; });
       if (!x) return;
-      simpan(function (bt) { bt.delete(db.doc('exp/' + id)); }, 'Hapus catatan keluar', x.ket + ' ' + rp(x.jumlah));
+      simpan(function (bt) { bt.delete(db.doc('exp/' + id)); }, x.kind === 'masuk' ? 'Hapus pemasukan lain' : 'Hapus catatan keluar', x.ket + ' ' + rp(x.jumlah));
     }
 
     if (a === 'ep' || a === 'ex') {
@@ -935,7 +946,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       return { id: p.id, tgl: p.tgl, t: 'in', ket: pm.nama || '?', j: p.jumlah, a: 'dp', e: 'ep' };
     });
     var keluar = X.map(function (x) {   // catatan pengembalian lama ikut tampil agar bisa dihapus
-      return { id: x.id, tgl: x.tgl, t: 'out', ket: x.ket, j: x.jumlah, a: 'dx', e: x.kind === 'kembali' ? '' : 'ex' };
+      return { id: x.id, tgl: x.tgl, t: x.kind === 'masuk' ? 'in' : 'out', ket: x.kind === 'masuk' ? 'Pemasukan lain: ' + x.ket : x.ket, j: x.jumlah, a: 'dx', e: x.kind === 'kembali' ? '' : 'ex' };
     });
     var semuaH = masuk.concat(keluar).sort(terbaru);
     var H = semuaH.slice(0, histN);
@@ -961,8 +972,8 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   /** Form ubah satu catatan; dipakai di tab Catat dan di rincian anggota. */
   function editForm(h) {
     return '<div class="ed">' +
-             '<b class="sm">Ubah ' + (h.t === 'in' ? 'iuran: ' + esc(h.ket) : 'pengeluaran') + '</b>' +
-             (h.t === 'out' ? '<input id="hkt" value="' + esc(ed.ket) + '" placeholder="Keperluan">' : '') +
+             '<b class="sm">Ubah ' + (ed.a === 'ep' ? 'iuran: ' + esc(h.ket) : (h.t === 'in' ? 'pemasukan lain' : 'pengeluaran')) + '</b>' +
+             (ed.a === 'ex' ? '<input id="hkt" value="' + esc(ed.ket) + '" placeholder="Keterangan">' : '') +
              '<div class="row"><input id="htg" type="date" value="' + esc(ed.tgl) + '">' +
                '<input id="hjm" inputmode="numeric" value="' + esc(ed.jml) + '" placeholder="Jumlah (Rp)"></div>' +
              '<div class="row"><button class="btn sm2" data-a="hs" data-id="' + h.id + '">Simpan perubahan</button>' +
@@ -996,7 +1007,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
         var pm = M.find(function (m) { return m.id === rec.mid; }) || {};
         simpan(function (bt) { bt.update(db.doc('pay/' + id), { tgl: t, jumlah: j }); }, 'Ubah iuran', (pm.nama || '?') + ': ' + ubah.join('; '));
       } else {
-        simpan(function (bt) { bt.update(db.doc('exp/' + id), { tgl: t, ket: k, jumlah: j }); }, 'Ubah catatan keluar', rec.ket + ': ' + ubah.join('; '));
+        simpan(function (bt) { bt.update(db.doc('exp/' + id), { tgl: t, ket: k, jumlah: j }); }, rec.kind === 'masuk' ? 'Ubah pemasukan lain' : 'Ubah catatan keluar', rec.ket + ': ' + ubah.join('; '));
       }
     }
     fill();
@@ -1033,6 +1044,30 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     });
   }
 
+  function tambahLain(e) {
+    e.preventDefault();
+    var k = $('#lk').value.trim().replace(/\s+/g, ' '), j = num($('#lj').value), t = $('#lt').value;
+    var msg = $('#lmsg');
+    if (!k || !j || !t) { msg.className = 'err'; msg.textContent = 'Lengkapi asal uang, tanggal, dan jumlah.'; return; }
+
+    var kunci = 'l|' + k.toLowerCase() + '|' + t + '|' + j;
+    if (dup !== kunci && X.some(function (x) { return x.kind === 'masuk' && String(x.ket).toLowerCase() === k.toLowerCase() && x.tgl === t && x.jumlah === j; })) {
+      dup = kunci;
+      msg.className = 'err';
+      msg.textContent = 'Sudah ada pemasukan yang sama (' + k + ' ' + rp(j) + ' tgl ' + t + '). Ketuk Simpan lagi bila memang benar dua kali.';
+      return;
+    }
+    dup = '';
+    msg.className = 'sm';
+    msg.textContent = 'Menyimpan…';
+    $('#lk').value = $('#lj').value = '';
+    simpan(function (b) { b.set(db.collection('exp').doc(), { tgl: t, ket: k, jumlah: j, kind: 'masuk', ts: Date.now() }); },
+      'Catat pemasukan lain', k + ' ' + rp(j) + ' tgl ' + t).then(function (ok) {
+      msg.className = ok ? 'ok' : 'err';
+      msg.textContent = ok ? 'Tersimpan di kas umum.' : 'Gagal menyimpan. Isi lagi dan coba ulang.';
+    });
+  }
+
   function tambahPengeluaran(e) {
     e.preventDefault();
     var k = $('#xk').value.trim(), j = num($('#xj').value), t = $('#xt').value;
@@ -1041,7 +1076,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     if (!k || !j || !t) { msg.className = 'err'; msg.textContent = 'Lengkapi keterangan, tanggal, dan jumlah.'; return; }
 
     var kunci = 'x|' + k.toLowerCase() + '|' + t + '|' + j;
-    if (dup !== kunci && X.some(function (x) { return x.kind !== 'kembali' && String(x.ket).toLowerCase() === k.toLowerCase() && x.tgl === t && x.jumlah === j; })) {
+    if (dup !== kunci && X.some(function (x) { return x.kind !== 'kembali' && x.kind !== 'masuk' && String(x.ket).toLowerCase() === k.toLowerCase() && x.tgl === t && x.jumlah === j; })) {
       dup = kunci;
       msg.className = 'err';
       msg.textContent = 'Sudah ada pengeluaran yang sama (' + k + ' ' + rp(j) + ' tgl ' + t + '). Ketuk Simpan lagi bila memang benar dua kali.';
@@ -1064,8 +1099,9 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
    * ========================================================= */
   function fLaporan() {
     var semua = P.map(function (p) { return { t: p.tgl.slice(0, 7), i: p.jumlah, o: 0 }; })
-      .concat(X.map(function (x) { return { t: (x.tgl || '').slice(0, 7), i: 0, o: x.jumlah }; }));
+      .concat(X.map(function (x) { return x.kind === 'masuk' ? { t: (x.tgl || '').slice(0, 7), i: x.jumlah, o: 0 } : { t: (x.tgl || '').slice(0, 7), i: 0, o: x.jumlah }; }));
 
+    var lainTotal = sum(X.filter(function (x) { return x.kind === 'masuk'; }), jml);
     var perBulan = {};
     semua.forEach(function (r) {
       if (!r.t) return;
@@ -1089,7 +1125,9 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       '<div class="card"><h2>Rekap bulanan</h2><div style="overflow-x:auto"><table>' +
         '<tr><th>Bulan</th><th>Masuk</th><th>Keluar</th><th>Uang di tangan</th></tr>' +
         (baris || '<tr><td colspan="4" class="sm">Belum ada data.</td></tr>') +
-      '</table></div></div>' +
+      '</table></div>' +
+      (lainTotal > 0 ? '<p class="sm">Kolom Masuk sudah termasuk pemasukan lain (hadiah, donasi) sebesar ' + rp(lainTotal) + '.</p>' : '') +
+      '</div>' +
       '<div class="card"><h2>Riwayat perubahan</h2>' +
         '<p class="sm">Jejak semua perubahan, termasuk yang dibatalkan. Angka kas dihitung dari data yang berlaku.</p>' + (riwayat || '<p class="sm">Belum ada perubahan.</p>') + '</div>';
   }
@@ -1203,7 +1241,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
             }).join('') + '</div>' +
           '<p class="sm">Contoh: saldo kas kelas <b class="mono">Rp 1.250.000</b></p></div>';
     } else if (sub === 'tentang') {
-      h = '<div class="card"><p><b>Kas Kelas</b> &middot; versi 1.1</p>' +
+      h = '<div class="card"><p><b>Kas Kelas</b> &middot; versi 1.2</p>' +
           '<p class="sm">Catatan kas disimpan di server dan bisa dilihat siapa saja yang memegang tautan aplikasi ini: nama anggota, NIM, dan status bayar. Hanya bendahara yang bisa mengubahnya.</p></div>';
     }
     $('#view').innerHTML = '<div class="wrap"><div class="shead"><h2>' + (sub ? SET_JUDUL[sub] : 'Pengaturan') +
