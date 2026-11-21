@@ -205,6 +205,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
   var loaded = 0, loadTimer = null;
   var armed = '', armTimer = null;   // konfirmasi hapus dua ketukan
   var ed = null;                     // catatan yang sedang diubah: {a, id, tgl, jml, ket}
+  var dup = '';                      // kunci catatan kembar yang sudah diperingatkan
   var PV = [];                       // pratinjau impor
 
   /* =========================================================
@@ -421,7 +422,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
   $('#nav').addEventListener('click', function (e) {
     var b = e.target.closest('button');
-    if (b) { tab = b.dataset.t; ed = null; show(); }
+    if (b) { tab = b.dataset.t; ed = null; dup = ''; show(); }
   });
 
   /* =========================================================
@@ -431,11 +432,11 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
     var aktif = D.filter(isAktif);
     var masuk = sum(P, jml);
     var keluar = sum(X, jml);
-    var titipan = sum(D, function (m) { return m.kredit; });
+    // lebihan anggota nonaktif tidak punya bulan berikutnya, jadi menjadi milik kas
+    var titipan = sum(D.filter(isAktif), function (m) { return m.kredit; });
     var saldo = masuk - keluar - titipan;
     var belum = aktif.filter(function (m) { return m.kurang > 0; });
     var tunggakan = sum(aktif, function (m) { return m.kurang; });
-    var nonaktifLebih = D.filter(function (m) { return m.aktif === false && m.kredit > 0; });
 
     var pengeluaran = X.filter(function (x) { return x.kind !== 'kembali'; })
       .sort(terbaru).slice(0, 5)
@@ -458,9 +459,6 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       (belum.length
         ? '<div class="alert red">' + belum.length + ' anggota belum lunas &middot; total tunggakan ' + rp(tunggakan) + '. Lihat tab Anggota.</div>'
         : '<div class="alert green">Semua anggota aktif sudah lunas sampai ' + bln(cur()) + '.</div>') +
-      (nonaktifLebih.length
-        ? '<div class="alert">' + nonaktifLebih.length + ' anggota nonaktif masih punya lebihan yang perlu dikembalikan.</div>'
-        : '') +
       '<div class="card"><h2>Pengeluaran terakhir</h2>' +
         (pengeluaran || '<p class="sm">Belum ada pengeluaran.</p>') +
       '</div>';
@@ -532,9 +530,6 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
              '<button class="btn sm2" data-a="sv" data-id="' + m.id + '">Simpan</button>' +
            '</div><p id="emsg" class="err"></p>' +
            '<div class="row">' +
-             (m.kredit > 0
-               ? '<button class="btn ghost sm2" data-a="kb" data-id="' + m.id + '">Kembalikan lebihan ' + rp(m.kredit) + '</button>'
-               : '') +
              '<button class="btn ghost sm2" data-a="tg" data-id="' + m.id + '">' +
                (m.aktif === false ? 'Aktifkan lagi' : 'Nonaktifkan') + '</button>' +
              (bayar.length
@@ -543,7 +538,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
                    (armed === 'dm' + m.id ? 'Yakin hapus?' : 'Hapus anggota') + '</button>') +
            '</div>' +
            (m.aktif === false && m.kredit > 0
-             ? '<p class="err">Anggota nonaktif masih punya lebihan: kembalikan karena tidak ada bulan berikutnya.</p>'
+             ? '<p class="sm">Lebihan ' + rp(m.kredit) + ' masuk ke kas kelas karena anggota ini nonaktif.</p>'
              : '');
     }
     return h + '</div>';
@@ -576,14 +571,6 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       var aktifkan = (m.aktif === false);
       tulis(db.doc('members/' + id).update(aktifkan ? { aktif: true, selesai: null } : { aktif: false, selesai: cur() }));
       catatLog('Status anggota', m.nama + (aktifkan ? ' diaktifkan' : ' dinonaktifkan'));
-    }
-
-    if (a === 'kb') {
-      tulis(db.collection('exp').add({
-        tgl: today(), ket: 'Pengembalian kelebihan - ' + m.nama,
-        jumlah: m.kredit, kind: 'kembali', mid: id, ts: Date.now()
-      }));
-      catatLog('Kembalikan lebihan', m.nama + ' ' + rp(m.kredit));
     }
 
     if (a === 'dp') {
@@ -813,8 +800,8 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       var pm = M.find(function (m) { return m.id === p.mid; }) || {};
       return { id: p.id, tgl: p.tgl, t: 'in', ket: pm.nama || '?', j: p.jumlah, a: 'dp', e: 'ep' };
     });
-    var keluar = X.filter(function (x) { return x.kind !== 'kembali'; }).map(function (x) {
-      return { id: x.id, tgl: x.tgl, t: 'out', ket: x.ket, j: x.jumlah, a: 'dx', e: 'ex' };
+    var keluar = X.map(function (x) {   // catatan pengembalian lama ikut tampil agar bisa dihapus
+      return { id: x.id, tgl: x.tgl, t: 'out', ket: x.ket, j: x.jumlah, a: 'dx', e: x.kind === 'kembali' ? '' : 'ex' };
     });
     var H = masuk.concat(keluar).sort(terbaru).slice(0, 12);
 
@@ -833,7 +820,7 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
       return '<div class="pv hv"><span>' + esc(h.tgl) + '</span><span>' + esc(h.ket) + '</span>' +
              '<span class="mono ' + h.t + '">' + (h.t === 'in' ? '+' : '-') + rp(h.j) + '</span>' +
              '<span class="acts">' +
-               '<button class="btn ghost sm2" data-a="' + h.e + '" data-id="' + h.id + '">Ubah</button>' +
+               (h.e ? '<button class="btn ghost sm2" data-a="' + h.e + '" data-id="' + h.id + '">Ubah</button>' : '') +
                '<button class="btn ghost sm2 del" data-a="' + h.a + '" data-id="' + h.id + '">' +
                  (armed === h.a + h.id ? 'Yakin?' : 'Hapus') + '</button>' +
              '</span></div>';
@@ -882,13 +869,24 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
     if (!m || !j || !t) { msg.className = 'err'; msg.textContent = 'Lengkapi anggota, tanggal, dan jumlah.'; return; }
 
+    var kunci = 'i|' + id + '|' + t + '|' + j;
+    if (dup !== kunci && P.some(function (p) { return p.mid === id && p.tgl === t && p.jumlah === j; })) {
+      dup = kunci;
+      msg.className = 'err';
+      msg.textContent = 'Sudah ada iuran ' + m.nama + ' ' + rp(j) + ' tgl ' + t + '. Ketuk Simpan lagi bila memang benar dua kali.';
+      return;
+    }
+    dup = '';
+
     db.collection('pay').add({ mid: id, tgl: t, jumlah: j, ts: Date.now() })
       .catch(function () { msg.className = 'err'; msg.textContent = 'Gagal menyimpan.'; });
+
+    catatLog('Catat iuran', m.nama + ' ' + rp(j) + ' tgl ' + t);
 
     var lebih = Math.max(0, m.paid + j - m.tagih);
     msg.className = 'ok';
     msg.textContent = 'Tersimpan: ' + m.nama + ' ' + rp(j) + '.' +
-      (lebih > 0 ? ' Ada lebihan ' + rp(lebih) + ': otomatis jadi titipan untuk bulan berikutnya. Kembalikan lewat tab Anggota bila perlu.' : '');
+      (lebih > 0 ? ' Ada lebihan ' + rp(lebih) + ': otomatis menutup bulan berikutnya.' : '');
     $('#pj').value = '';
     $('#pm').value = '';
   }
@@ -900,8 +898,19 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
     if (!k || !j || !t) { msg.className = 'err'; msg.textContent = 'Lengkapi keterangan, tanggal, dan jumlah.'; return; }
 
+    var kunci = 'x|' + k.toLowerCase() + '|' + t + '|' + j;
+    if (dup !== kunci && X.some(function (x) { return x.kind !== 'kembali' && String(x.ket).toLowerCase() === k.toLowerCase() && x.tgl === t && x.jumlah === j; })) {
+      dup = kunci;
+      msg.className = 'err';
+      msg.textContent = 'Sudah ada pengeluaran yang sama (' + k + ' ' + rp(j) + ' tgl ' + t + '). Ketuk Simpan lagi bila memang benar dua kali.';
+      return;
+    }
+    dup = '';
+
     db.collection('exp').add({ tgl: t, ket: k, jumlah: j, kind: 'keluar', ts: Date.now() })
       .catch(function () { msg.className = 'err'; msg.textContent = 'Gagal menyimpan.'; });
+
+    catatLog('Catat pengeluaran', k + ' ' + rp(j) + ' tgl ' + t);
 
     msg.className = 'ok';
     msg.textContent = 'Tersimpan.';
@@ -936,10 +945,11 @@ th { font-size: .72rem; color: var(--muted); text-transform: uppercase; border-t
 
     $('#rep').innerHTML =
       '<div class="card"><h2>Rekap bulanan</h2><div style="overflow-x:auto"><table>' +
-        '<tr><th>Bulan</th><th>Masuk</th><th>Keluar</th><th>Saldo akhir</th></tr>' +
+        '<tr><th>Bulan</th><th>Masuk</th><th>Keluar</th><th>Uang di tangan</th></tr>' +
         (baris || '<tr><td colspan="4" class="sm">Belum ada data.</td></tr>') +
       '</table></div></div>' +
-      '<div class="card"><h2>Riwayat perubahan</h2>' + (riwayat || '<p class="sm">Belum ada perubahan.</p>') + '</div>';
+      '<div class="card"><h2>Riwayat perubahan</h2>' +
+        '<p class="sm">Jejak semua perubahan, termasuk yang dibatalkan. Angka kas dihitung dari data yang berlaku.</p>' + (riwayat || '<p class="sm">Belum ada perubahan.</p>') + '</div>';
   }
 
   /* =========================================================
